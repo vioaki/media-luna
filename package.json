@@ -1,22 +1,77 @@
 {
   "name": "koishi-plugin-media-luna",
-  "description": "",
-  "version": "0.0.1",
+  "description": "test webui",
+  "version": "0.0.8",
   "main": "lib/index.js",
   "typings": "lib/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./lib/index.d.ts",
+      "default": "./lib/index.js"
+    },
+    "./package.json": "./package.json"
+  },
+  "author": "ziyi233",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/ziyi233/koishi-plugin-media-luna.git"
+  },
+  "bugs": {
+    "url": "https://github.com/ziyi233/koishi-plugin-media-luna/issues"
+  },
+  "homepage": "https://github.com/ziyi233/koishi-plugin-media-luna#readme",
   "files": [
     "lib",
-    "dist"
+    "dist",
+    "client"
   ],
   "license": "MIT",
-  "scripts": {},
+  "scripts": {
+    "build:server": "tsc",
+    "build:client": "koishi-console build",
+    "build": "yarn build:server && yarn build:client"
+  },
   "keywords": [
     "chatbot",
     "koishi",
-    "plugin"
+    "plugin",
+    "ai",
+    "image-generation",
+    "middleware",
+    "chatluna"
   ],
-  "devDependencies": {},
+  "devDependencies": {
+    "@koishijs/client": "^5.30.0",
+    "@koishijs/plugin-console": "^5.30.0",
+    "koishi": "^4.18.7",
+    "typescript": "^5.3.3"
+  },
   "peerDependencies": {
-    "koishi": "^4.18.7"
+    "@koishijs/plugin-console": "^5.30.0",
+    "koishi": "^4.18.0"
+  },
+  "koishi": {
+    "description": {
+      "zh": "中间件驱动的多媒体生成插件，支持多连接器、预设系统和 ChatLuna 工具集成"
+    },
+    "service": {
+      "required": [
+        "database",
+        "http"
+      ],
+      "optional": [
+        "chatluna",
+        "monetary",
+        "console"
+      ],
+      "implements": [
+        "mediaLuna"
+      ]
+    },
+    "locales": [
+      "zh-CN"
+    ],
+    "browser": true,
+    "icon": "mdi:image-multiple"
   }
 }
