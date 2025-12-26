@@ -1,7 +1,7 @@
 // 任务服务
 
 import { Context, $ } from 'koishi'
-import type { MediaLunaTask } from '../../types/augmentations'
+import type { MediaLunaTask } from '../../augmentations'
 import type { GenerationRequest, OutputAsset } from '../../types'
 
 /** 任务状态 */

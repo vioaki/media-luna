@@ -1,8 +1,8 @@
 // 渠道服务
 
 import { Context } from 'koishi'
-import { ChannelConfig } from './types'
-import type { MediaLunaChannel } from '../types/augmentations'
+import { ChannelConfig } from '../types'
+import type { MediaLunaChannel } from '../../augmentations'
 
 /**
  * 渠道服务

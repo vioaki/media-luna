@@ -2,7 +2,7 @@
 
 import { Context } from 'koishi'
 import type { PluginLogger } from '../types'
-import { createPluginLogger } from '../logger'
+import { createPluginLogger } from '../utils/logger'
 
 /**
  * 服务注册中心

@@ -436,3 +436,164 @@ export interface PluginInfo {
   /** 预设数据源（用于 table 类型字段的内置预设） */
   presets?: Record<string, Record<string, any>[]>
 }
+
+// ============ 前端扩展 ============
+
+/** 扩展点位置 */
+export type ExtensionSlot =
+  | 'settings-tab'           // 设置页额外 Tab
+  | 'channel-config-section' // 渠道配置额外字段组
+  | 'generate-panel-section' // 生成面板额外区块
+
+/** 前端扩展定义 */
+export interface FrontendExtension {
+  id: string
+  slot: ExtensionSlot
+  schema: Schema
+  dataKey?: string
+}
+
+// ============ API 响应类型 ============
+
+/** 通用 API 响应 */
+export interface ApiResponse<T> {
+  success: boolean
+  data?: T
+  error?: string
+}
+
+/** 分页响应 */
+export interface PaginatedResponse<T> {
+  items: T[]
+  total: number
+  limit: number
+  offset: number
+}
+
+/** 任务统计 */
+export interface TaskStats {
+  total: number
+  byStatus: {
+    pending: number
+    processing: number
+    success: number
+    failed: number
+  }
+  successRate: string
+}
+
+/** 任务数据（API 返回） */
+export interface TaskData {
+  id: number
+  uid: number | null  // Koishi user.id（可为空，表示匿名/未登录）
+  channelId: number
+  requestSnapshot: {
+    channel: number
+    prompt: string
+    inputFiles?: OutputAsset[]
+    parameters?: Record<string, any>
+    uid?: number
+  }
+  responseSnapshot: OutputAsset[] | null
+  status: 'pending' | 'processing' | 'success' | 'failed'
+  middlewareLogs: Record<string, any>
+  startTime: string
+  endTime: string | null
+  duration: number | null
+}
+
+/** 预设数据 */
+export interface PresetData {
+  id: number
+  name: string
+  promptTemplate: string
+  tags: string[]
+  referenceImages: string[]
+  parameterOverrides: Record<string, any>
+  source: 'user' | 'api'
+  enabled: boolean
+  // 远程同步相关字段
+  remoteId?: number
+  remoteUrl?: string
+  thumbnail?: string
+}
+
+/** 中间件信息（API 返回） */
+export interface MiddlewareInfo {
+  name: string
+  displayName: string
+  description: string
+  category: string
+  phase: string
+  configFields: ConfigField[]
+  configGroup: string | null
+  enabled: boolean
+  config: Record<string, any>
+}
+
+/** 中间件卡片字段 API 响应 */
+export interface CardFieldsResponse {
+  fields: CardField[]
+  globalConfigs: Record<string, Record<string, any>>
+}
+
+// ============ 设置面板 ============
+
+/** 设置面板类型 */
+export type SettingsPanelType = 'builtin' | 'custom'
+
+/** 设置面板定义 */
+export interface SettingsPanelDefinition {
+  /** 唯一标识 */
+  id: string
+  /** 显示名称 */
+  name: string
+  /** 图标名称 (k-icon name) */
+  icon: string
+  /** 描述 */
+  description?: string
+  /** 排序优先级（数值越小越靠前） */
+  order?: number
+  /** 面板类型：builtin 为内置组件，custom 为自定义 */
+  type: SettingsPanelType
+  /**
+   * 内置组件类型（type='builtin' 时使用）
+   * - 'middlewares': 功能模块（中间件配置，包含存储/缓存等）
+   * - 'plugins': 扩展插件管理（包含所有插件的详细配置）
+   */
+  component?: 'middlewares' | 'plugins'
+  /** 自定义配置字段（type='custom' 时使用） */
+  configFields?: ConfigField[]
+  /** 配置数据 key（存储到数据库的 key） */
+  configKey?: string
+}
+
+/** 设置面板信息（API 返回） */
+export interface SettingsPanelInfo {
+  id: string
+  name: string
+  icon: string
+  description?: string
+  order: number
+  type: SettingsPanelType
+  component?: string
+  configFields?: ConfigField[]
+  configKey?: string
+  /** 当前配置值（type='custom' 时） */
+  config?: Record<string, any>
+}
+
+/** 前端文件数据（用于上传） */
+export interface ClientFileData {
+  type: 'image' | 'audio' | 'video' | 'file'
+  url?: string
+  base64?: string
+  mimeType?: string
+  filename?: string
+}
+
+// ============ 向后兼容别名 ============
+
+export type ConnectorFieldType = ConfigFieldType
+export type ConnectorFieldOption = ConfigFieldOption
+export type MiddlewareCardField = CardField

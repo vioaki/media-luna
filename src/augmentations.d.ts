@@ -1,6 +1,6 @@
 // Koishi 模块扩展声明
-import type { MediaLunaService } from '../core/medialuna.service'
-import type { ConnectorDefinition, MiddlewareDefinition } from './index'
+import type { MediaLunaService } from './core/services/medialuna.service'
+import type { ConnectorDefinition, MiddlewareDefinition } from './core/types'
 import type Router from '@koa/router'
 
 declare module 'koishi' {

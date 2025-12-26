@@ -11,12 +11,12 @@ import type {
   ConnectorDefinition,
   ServiceDefinition,
   ConfigField
-} from './types'
-import { createPluginLogger } from './logger'
-import { Errors } from './error'
-import { ConfigService } from './config'
-import { MiddlewareRegistry } from './pipeline'
-import { ConnectorRegistry, ServiceRegistry } from './registry'
+} from '../types'
+import { createPluginLogger } from '../utils/logger'
+import { Errors } from '../utils/error'
+import { ConfigService } from '../config'
+import { MiddlewareRegistry } from '../pipeline'
+import { ConnectorRegistry, ServiceRegistry } from '../registry'
 
 /** 已加载的插件状态 */
 interface LoadedPlugin {

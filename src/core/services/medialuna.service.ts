@@ -6,7 +6,7 @@ import type {
   MiddlewareDefinition,
   PluginDefinition,
   ChannelConfig as CoreChannelConfig
-} from './types'
+} from '../types'
 import type {
   FrontendExtension,
   GenerationRequest,
@@ -14,25 +14,25 @@ import type {
   ChannelConfig,
   SettingsPanelDefinition,
   SettingsPanelInfo
-} from '../types'
-import { PluginLoader } from './plugin-loader'
-import { ConfigService } from './config'
-import { ServiceRegistry, ConnectorRegistry } from './registry'
-import { MiddlewareRegistry, GenerationPipeline } from './pipeline'
+} from '../../types'
+import { PluginLoader } from '../plugin/loader'
+import { ConfigService } from '../config'
+import { ServiceRegistry, ConnectorRegistry } from '../registry'
+import { MiddlewareRegistry, GenerationPipeline } from '../pipeline'
 import { RequestService, createRequestMiddleware } from './request.service'
 import { ChannelService } from './channel.service'
 
 // 导入内置插件
-import { builtinPlugins } from '../plugins'
+import { builtinPlugins } from '../../plugins'
 
 
 // 导入插件提供的服务类型
-import type { PresetService } from '../plugins/preset'
-import type { RemoteSyncService } from '../plugins/preset'
-import type { TaskService } from '../plugins/task'
-import type { CacheService } from '../plugins/cache'
-import type { PresetPluginConfig } from '../plugins/preset/config'
-import { defaultPresetConfig } from '../plugins/preset/config'
+import type { PresetService } from '../../plugins/preset'
+import type { RemoteSyncService } from '../../plugins/preset'
+import type { TaskService } from '../../plugins/task'
+import type { CacheService } from '../../plugins/cache'
+import type { PresetPluginConfig } from '../../plugins/preset/config'
+import { defaultPresetConfig } from '../../plugins/preset/config'
 
 /** 远程预设配置（从 PresetPluginConfig 中提取的配置项） */
 export interface RemotePresetConfig {
@@ -86,7 +86,7 @@ export class MediaLunaService extends Service {
 
     // 读取插件版本
     try {
-      const pkg = require('../../package.json')
+      const pkg = require('../../../package.json')
       this.version = pkg.version || 'unknown'
     } catch {
       this.version = 'unknown'
@@ -384,7 +384,7 @@ export class MediaLunaService extends Service {
     description?: string
     version?: string
     enabled: boolean
-    configFields: import('../types').ConfigField[]
+    configFields: import('../../types').ConfigField[]
     config: Record<string, any>
     actions: Array<{ name: string; label: string; type?: string; icon?: string; apiEvent: string }>
     middlewares: Array<{ name: string; displayName: string; phase: string; enabled: boolean }>
@@ -471,7 +471,7 @@ export class MediaLunaService extends Service {
     channelName: string
     presetName?: string
     prompt: string
-    files?: import('../types').FileData[]
+    files?: import('../../types').FileData[]
     session?: import('koishi').Session | null
     uid?: number
     onPrepareComplete?: (hints: string[]) => Promise<void>

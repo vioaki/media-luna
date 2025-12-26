@@ -6,7 +6,7 @@ import * as fs from 'fs'
 import * as path from 'path'
 import * as yaml from 'yaml'
 import type { PluginLogger, ConfigField } from '../types'
-import { createPluginLogger } from '../logger'
+import { createPluginLogger } from '../utils/logger'
 
 export interface ConfigServiceOptions {
   /** 配置文件目录（相对于 Koishi data 目录） */

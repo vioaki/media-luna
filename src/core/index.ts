@@ -3,8 +3,9 @@
 
 // 类型导出
 export * from './types'
-export * from './error'
-export { LogLevel, setLogLevel, getLogLevel, createPluginLogger, createCoreLogger } from './logger'
+
+// 工具
+export * from './utils'
 
 // 配置服务
 export { ConfigService, ConfigServiceOptions } from './config'
@@ -15,17 +16,13 @@ export { MiddlewareDependencyGraph, MiddlewareRegistry, GenerationPipeline } fro
 // 注册中心
 export { ConnectorRegistry, ServiceRegistry } from './registry'
 
-// 插件加载器
-export { PluginLoader, definePlugin } from './plugin-loader'
+// 插件系统
+export { PluginLoader, definePlugin } from './plugin'
 
-// 请求服务
-export { RequestService, createRequestMiddleware } from './request.service'
-
-// 渠道服务
-export { ChannelService } from './channel.service'
-
-// 主服务
-export { MediaLunaService, type RemotePresetConfig } from './medialuna.service'
+// 服务
+export { RequestService, createRequestMiddleware } from './services/request.service'
+export { ChannelService } from './services/channel.service'
+export { MediaLunaService, type RemotePresetConfig } from './services/medialuna.service'
 
 // API 模块
 export { registerAllApis, getUidFromAuth, apiError, apiSuccess } from './api'

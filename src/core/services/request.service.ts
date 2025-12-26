@@ -12,11 +12,11 @@ import type {
   MiddlewareRunStatus,
   ConnectorRequestLog,
   ConnectorResponseLog
-} from './types'
-import { MiddlewareRunStatus as Status } from './types'
-import { createPluginLogger } from './logger'
-import { Errors, MediaLunaError, toMediaLunaError } from './error'
-import { ConnectorRegistry } from './registry'
+} from '../types'
+import { MiddlewareRunStatus as Status } from '../types'
+import { createPluginLogger } from '../utils/logger'
+import { Errors, MediaLunaError, toMediaLunaError } from '../utils/error'
+import { ConnectorRegistry } from '../registry'
 
 export interface RequestResult {
   success: boolean

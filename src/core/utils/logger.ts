@@ -2,7 +2,7 @@
 // 直接使用 Koishi 的 Logger，日志级别由 Koishi 配置控制
 
 import { Logger } from 'koishi'
-import type { PluginLogger } from './types'
+import type { PluginLogger } from '../types'
 
 /** 日志级别（兼容旧 API） */
 export type LogLevel = 'debug' | 'info' | 'warn' | 'error'
