@@ -1028,8 +1028,8 @@ onMounted(() => {
   display: flex;
   flex-direction: column-reverse;
   align-items: flex-end;
-  flex-grow: 1;
-  margin-left: 1rem;
+  margin-left: auto;
+  text-align: right;
 }
 
 .stat-label {
