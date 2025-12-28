@@ -26,6 +26,7 @@ import comfyuiConnectorPlugin from './connector-comfyui'
 import chatlunaConnectorPlugin from './connector-chatluna'
 import doubaoConnectorPlugin from './connector-doubao'
 import minimaxConnectorPlugin from './connector-minimax'
+import edgeTTSConnectorPlugin from './connector-edge-tts'
 
 /** 内置插件列表 - 只需在这里维护一次 */
 export const builtinPlugins: PluginDefinition[] = [
@@ -51,7 +52,8 @@ export const builtinPlugins: PluginDefinition[] = [
   comfyuiConnectorPlugin,
   chatlunaConnectorPlugin,
   doubaoConnectorPlugin,
-  minimaxConnectorPlugin
+  minimaxConnectorPlugin,
+  edgeTTSConnectorPlugin
 ]
 
 // 单独导出插件（用于外部引用）
@@ -76,7 +78,8 @@ export {
   comfyuiConnectorPlugin,
   chatlunaConnectorPlugin,
   doubaoConnectorPlugin,
-  minimaxConnectorPlugin
+  minimaxConnectorPlugin,
+  edgeTTSConnectorPlugin
 }
 
 // 导出类型

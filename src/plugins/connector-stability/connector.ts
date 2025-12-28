@@ -112,6 +112,8 @@ async function generate(
 export const StabilityConnector: ConnectorDefinition = {
   id: 'stability',
   name: 'Stability AI',
+  description: 'Stability AI 官方 API，支持 SD3/Ultra 等高端模型',
+  icon: 'stability',
   supportedTypes: ['image'],
   fields: connectorFields,
   cardFields: connectorCardFields,

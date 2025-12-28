@@ -188,6 +188,8 @@ async function generate(
 export const ComfyUIConnector: ConnectorDefinition = {
   id: 'comfyui',
   name: 'ComfyUI',
+  description: '基于节点的图像生成工作流，支持自定义 Workflow',
+  icon: 'comfyui',
   supportedTypes: ['image'],
   fields: connectorFields,
   cardFields: connectorCardFields,

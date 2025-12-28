@@ -62,6 +62,8 @@ export class ConnectorRegistry {
   listSummary(): Array<{
     id: string
     name: string
+    description?: string
+    icon?: string
     supportedTypes: string[]
     fields: any[]
     cardFields: any[]
@@ -70,6 +72,8 @@ export class ConnectorRegistry {
     return this.list().map(c => ({
       id: c.id,
       name: c.name,
+      description: c.description,
+      icon: c.icon,
       supportedTypes: c.supportedTypes,
       fields: c.fields,
       cardFields: c.cardFields || [],

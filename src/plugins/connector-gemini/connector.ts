@@ -163,6 +163,8 @@ async function generate(
 export const GeminiConnector: ConnectorDefinition = {
   id: 'gemini-v3',
   name: 'Google Gemini 3',
+  description: 'Google Gemini 原生API，支持图像生成',
+  icon: 'gemini',
   supportedTypes: ['image'],
   fields: connectorFields,
   cardFields: connectorCardFields,

@@ -127,6 +127,8 @@ async function generate(
 export const DoubaoConnector: ConnectorDefinition = {
   id: 'doubao',
   name: '豆包 Seedream',
+  description: '字节跳动豆包 Seedream 图像生成模型',
+  icon: 'doubao',
   supportedTypes: ['image'],
   fields: connectorFields,
   cardFields: connectorCardFields,

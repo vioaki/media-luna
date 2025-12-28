@@ -144,6 +144,8 @@ async function generate(
 export const FluxConnector: ConnectorDefinition = {
   id: 'flux',
   name: 'Flux',
+  description: 'Black Forest Labs 的 Flux 系列模型，快速高质量图像生成',
+  icon: 'flux',
   supportedTypes: ['image'],
   fields: connectorFields,
   cardFields: connectorCardFields,

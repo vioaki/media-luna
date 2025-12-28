@@ -114,6 +114,8 @@ async function generate(
 export const RunwayConnector: ConnectorDefinition = {
   id: 'runway',
   name: 'Runway',
+  description: 'Runway Gen-3 视频生成，支持图生视频',
+  icon: 'runway',
   supportedTypes: ['video'],
   fields: connectorFields,
   cardFields: connectorCardFields,

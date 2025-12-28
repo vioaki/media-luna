@@ -7,10 +7,20 @@ import { connectorFields, connectorCardFields } from './config'
 
 /**
  * 检查是否为有效 URL
+ * 除了格式校验，还检查 URL 是否包含非法字符（如 JSON 残留）
  */
 function isValidUrl(url: string): boolean {
+  // 检查是否包含 JSON 残留字符
+  if (/[{}\[\]"]/.test(url)) {
+    return false
+  }
+
   try {
-    new URL(url)
+    const parsed = new URL(url)
+    // 确保有有效的 host
+    if (!parsed.host) return false
+    // 确保 pathname 不包含异常字符
+    if (/[{}\[\]"]/.test(parsed.pathname)) return false
     return true
   } catch {
     return false
@@ -145,10 +155,14 @@ function extractMediaFromContent(content: string, mode: string): OutputAsset[] {
 
   if (mode === 'auto' || mode === 'url') {
     // 提取独立的 URL（排除已提取的）
-    const urlRegex = /https?:\/\/[^\s<>"{}|\\^`[\]']+/g
+    // 注意：排除 ) 以避免匹配 Markdown 语法中的 URL
+    // 排除 } ] " ' 以避免匹配 JSON 结构中的 URL
+    const urlRegex = /https?:\/\/[^\s<>"{}|\\^`[\]')]+/g
     let match
     while ((match = urlRegex.exec(content)) !== null) {
-      const url = match[0]
+      let url = match[0]
+      // 清理 URL 末尾可能的标点符号
+      url = url.replace(/[.,;:!?]+$/, '')
       if (!seenUrls.has(url) && isMediaUrl(url)) {
         const kind = getMediaKind(url)
         addAsset({
@@ -323,6 +337,8 @@ async function generate(
 export const ChatApiConnector: ConnectorDefinition = {
   id: 'chat-api',
   name: 'Chat API',
+  description: '通用 OpenAI 兼容接口',
+  icon: 'openai',
   supportedTypes: ['image', 'audio', 'video'],
   fields: connectorFields,
   cardFields: connectorCardFields,

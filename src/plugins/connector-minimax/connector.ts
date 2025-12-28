@@ -154,6 +154,8 @@ function getMimeType(format: string): string {
 export const MiniMaxConnector: ConnectorDefinition = {
   id: 'minimax-t2a',
   name: 'MiniMax T2A',
+  description: 'MiniMax 语音合成，支持多音色和情感控制',
+  icon: 'minimax',
   supportedTypes: ['audio'],
   fields: connectorFields,
   cardFields: connectorCardFields,

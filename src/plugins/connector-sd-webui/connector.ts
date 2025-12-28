@@ -99,6 +99,8 @@ async function generate(
 export const SDWebUIConnector: ConnectorDefinition = {
   id: 'sd-webui',
   name: 'Stable Diffusion WebUI',
+  description: '本地部署的 Stable Diffusion WebUI，支持丰富的模型和 LoRA',
+  icon: 'sd-webui',
   supportedTypes: ['image'],
   fields: connectorFields,
   cardFields: connectorCardFields,

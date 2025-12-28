@@ -1,248 +1,343 @@
 <template>
-  <el-dialog
-    v-model="visible"
-    :title="isEdit ? '编辑渠道' : '创建渠道'"
-    width="800px"
-    :close-on-click-modal="false"
-    class="channel-config-dialog"
-    @closed="handleClosed"
-  >
-    <div class="dialog-layout">
-      <!-- 左侧 Tab 导航 -->
-      <div class="tab-nav">
-        <div
-          v-for="tab in availableTabs"
-          :key="tab.id"
-          class="tab-item"
-          :class="{ active: activeTab === tab.id }"
-          @click="activeTab = tab.id"
-        >
-          <k-icon :name="tab.icon" />
-          <span>{{ tab.label }}</span>
-          <span v-if="tab.badge" class="tab-badge">{{ tab.badge }}</span>
-        </div>
-      </div>
+  <!-- 整体容器：使用 Teleport 确保在 body 层级 -->
+  <Teleport to="body">
+    <Transition name="dialog-slide">
+      <div v-if="visible" class="channel-config-container">
+        <!-- 遮罩层 -->
+        <div class="overlay" @click="visible = false"></div>
 
-      <!-- 右侧内容区 -->
-      <div class="tab-content">
-        <!-- 基本信息 -->
-        <div v-show="activeTab === 'basic'" class="content-section">
-          <div class="section-header">
-            <h4>基本信息</h4>
-            <p>设置渠道的名称、连接器和标签</p>
+        <!-- 主对话框 -->
+        <div class="main-dialog">
+          <div class="dialog-header">
+            <span class="dialog-title">{{ isEdit ? '编辑渠道' : '创建渠道' }}</span>
+            <button class="close-btn" @click="visible = false">
+              <k-icon name="x" />
+            </button>
           </div>
 
-          <div class="form-group">
-            <label class="form-label required">渠道名称</label>
-            <el-input
-              v-model="form.name"
-              placeholder="如 OpenAI DALL-E"
-            />
-            <div class="form-hint">用户可见的渠道名称，冲突时会自动添加后缀</div>
-          </div>
-
-          <div class="form-row">
-            <div class="form-group flex-1">
-              <label class="form-label required">连接器</label>
-              <el-select
-                v-model="form.connectorId"
-                placeholder="选择连接器"
-                @change="handleConnectorChange"
-                style="width: 100%"
+          <div class="dialog-layout">
+            <!-- 左侧 Tab 导航 -->
+            <div class="tab-nav">
+              <div
+                v-for="tab in availableTabs"
+                :key="tab.id"
+                class="tab-item"
+                :class="{ active: activeTab === tab.id }"
+                @click="activeTab = tab.id"
               >
-                <el-option
-                  v-for="connector in connectors"
-                  :key="connector.id"
-                  :label="connector.name"
-                  :value="connector.id"
-                />
-              </el-select>
-            </div>
-            <div class="form-group">
-              <label class="form-label">启用状态</label>
-              <div class="switch-wrapper">
-                <el-switch v-model="form.enabled" />
-                <span class="switch-label">{{ form.enabled ? '启用' : '禁用' }}</span>
+                <k-icon :name="tab.icon" />
+                <span>{{ tab.label }}</span>
+                <span v-if="tab.badge" class="tab-badge">{{ tab.badge }}</span>
               </div>
             </div>
-          </div>
 
-          <div class="form-group">
-            <label class="form-label">标签</label>
-            <TagInput v-model="form.tags!" :suggestions="tagSuggestions" placeholder="选择或输入标签..." />
-            <div class="form-hint">用于分类和筛选渠道，标签与预设匹配后才能使用对应预设</div>
-          </div>
-
-          <!-- 连接器配置（内嵌） -->
-          <template v-if="currentConnectorFields.length > 0">
-            <div class="section-divider">
-              <span>{{ currentConnectorName }} 配置</span>
-            </div>
-            <ConfigRenderer
-              :fields="currentConnectorFields"
-              v-model="form.connectorConfig!"
-            />
-          </template>
-        </div>
-
-        <!-- 中间件流程 -->
-        <div v-show="activeTab === 'middlewares'" class="content-section">
-          <div class="section-header">
-            <h4>中间件流程</h4>
-            <p>控制此渠道的中间件启用状态</p>
-          </div>
-
-          <div class="override-hint-bar">
-            <k-icon name="info-circle" />
-            <span>留空表示跟随全局配置</span>
-          </div>
-
-          <div class="pipeline-flow">
-            <div
-              v-for="(phase, phaseIndex) in phases"
-              :key="phase.id"
-              class="phase-section"
-            >
-              <!-- 阶段标题 -->
-              <div class="phase-header" :class="phase.colorClass">
-                <div class="phase-icon">
-                  <k-icon :name="phase.icon" />
+            <!-- 右侧内容区 -->
+            <div class="tab-content">
+              <!-- 基本信息 -->
+              <div v-show="activeTab === 'basic'" class="content-section">
+                <div class="section-header">
+                  <h4>基本信息</h4>
+                  <p>设置渠道的名称、连接器和标签</p>
                 </div>
-                <div class="phase-info">
-                  <span class="phase-name">{{ phase.label }}</span>
-                  <span class="phase-desc">{{ phase.description }}</span>
-                </div>
-                <span class="phase-badge">{{ getPhaseMiddlewares(phase.id).length }}</span>
-              </div>
 
-              <!-- 中间件列表 -->
-              <div class="phase-middlewares" v-if="getPhaseMiddlewares(phase.id).length > 0">
-                <div
-                  v-for="mw in getPhaseMiddlewares(phase.id)"
-                  :key="mw.name"
-                  class="mw-item"
-                  :class="{ 'has-override': getMiddlewareEnabled(mw.configGroup || mw.name, mw.name) !== undefined }"
-                >
-                  <div class="mw-card">
-                    <div class="mw-status" :class="getMiddlewareStatusClass(mw)"></div>
-                    <div class="mw-content">
-                      <span class="mw-name">{{ mw.displayName }}</span>
-                      <span class="mw-desc">{{ mw.description || categoryLabels[mw.category] || mw.category }}</span>
+                <div class="form-group">
+                  <label class="form-label required">渠道名称</label>
+                  <el-input
+                    v-model="form.name"
+                    placeholder="如 OpenAI DALL-E"
+                  />
+                  <div class="form-hint">用户可见的渠道名称，冲突时会自动添加后缀</div>
+                </div>
+
+                <div class="form-row">
+                  <div class="form-group flex-1">
+                    <label class="form-label required">连接器</label>
+                    <div class="connector-display">
+                      <span v-if="form.connectorId" class="connector-name">{{ currentConnectorName }}</span>
+                      <span v-else class="connector-placeholder">← 在右侧面板选择</span>
                     </div>
-                    <el-select
-                      :model-value="getMiddlewareEnabled(mw.configGroup || mw.name, mw.name)"
-                      @update:model-value="setMiddlewareEnabled(mw.configGroup || mw.name, mw.name, $event)"
-                      :placeholder="mw.enabled ? '全局: 启用' : '全局: 禁用'"
-                      clearable
-                      size="small"
-                      class="mw-switch"
-                    >
-                      <el-option label="启用" :value="true" />
-                      <el-option label="禁用" :value="false" />
-                    </el-select>
+                  </div>
+                  <div class="form-group">
+                    <label class="form-label">启用状态</label>
+                    <div class="switch-wrapper">
+                      <el-switch v-model="form.enabled" />
+                      <span class="switch-label">{{ form.enabled ? '启用' : '禁用' }}</span>
+                    </div>
+                  </div>
+                </div>
+
+                <div class="form-group">
+                  <label class="form-label">标签</label>
+                  <TagInput v-model="form.tags!" :suggestions="tagSuggestions" placeholder="选择或输入标签..." />
+                  <div class="form-hint">用于分类和筛选渠道，标签与预设匹配后才能使用对应预设</div>
+                </div>
+
+                <!-- 连接器配置（内嵌） -->
+                <template v-if="form.connectorId">
+                  <div class="section-divider">
+                    <span>{{ currentConnectorName }} 配置</span>
+                  </div>
+                  <div v-if="connectorFieldsLoading" class="loading-hint">
+                    <k-icon name="loader" class="spin" />
+                    <span>加载配置项...</span>
+                  </div>
+                  <ConfigRenderer
+                    v-else-if="currentConnectorFields.length > 0"
+                    :fields="currentConnectorFields"
+                    v-model="form.connectorConfig!"
+                  />
+                  <div v-else class="empty-config-hint">
+                    <span>此连接器无需额外配置</span>
+                  </div>
+                </template>
+              </div>
+
+              <!-- 中间件流程 -->
+              <div v-show="activeTab === 'middlewares'" class="content-section">
+                <div class="section-header">
+                  <h4>中间件流程</h4>
+                  <p>控制此渠道的中间件启用状态</p>
+                </div>
+
+                <div class="override-hint-bar">
+                  <k-icon name="info-circle" />
+                  <span>留空表示跟随全局配置</span>
+                </div>
+
+                <div class="pipeline-flow">
+                  <div
+                    v-for="(phase, phaseIndex) in phases"
+                    :key="phase.id"
+                    class="phase-section"
+                  >
+                    <!-- 阶段标题 -->
+                    <div class="phase-header" :class="phase.colorClass">
+                      <div class="phase-icon">
+                        <k-icon :name="phase.icon" />
+                      </div>
+                      <div class="phase-info">
+                        <span class="phase-name">{{ phase.label }}</span>
+                        <span class="phase-desc">{{ phase.description }}</span>
+                      </div>
+                      <span class="phase-badge">{{ getPhaseMiddlewares(phase.id).length }}</span>
+                    </div>
+
+                    <!-- 中间件列表 -->
+                    <div class="phase-middlewares" v-if="getPhaseMiddlewares(phase.id).length > 0">
+                      <div
+                        v-for="mw in getPhaseMiddlewares(phase.id)"
+                        :key="mw.name"
+                        class="mw-item"
+                        :class="{ 'has-override': getMiddlewareEnabled(mw.configGroup || mw.name, mw.name) !== undefined }"
+                      >
+                        <div class="mw-card">
+                          <div class="mw-status" :class="getMiddlewareStatusClass(mw)"></div>
+                          <div class="mw-content">
+                            <span class="mw-name">{{ mw.displayName }}</span>
+                            <span class="mw-desc">{{ mw.description || categoryLabels[mw.category] || mw.category }}</span>
+                          </div>
+                          <el-select
+                            :model-value="getMiddlewareEnabled(mw.configGroup || mw.name, mw.name)"
+                            @update:model-value="setMiddlewareEnabled(mw.configGroup || mw.name, mw.name, $event)"
+                            :placeholder="mw.enabled ? '全局: 启用' : '全局: 禁用'"
+                            clearable
+                            size="small"
+                            class="mw-switch"
+                          >
+                            <el-option label="启用" :value="true" />
+                            <el-option label="禁用" :value="false" />
+                          </el-select>
+                        </div>
+                      </div>
+                    </div>
+
+                    <!-- 空状态 -->
+                    <div v-else class="empty-phase">
+                      <span>无中间件</span>
+                    </div>
+
+                    <!-- 阶段间连接箭头 -->
+                    <div v-if="phaseIndex < phases.length - 1" class="phase-connector">
+                      <div class="connector-line"></div>
+                      <div class="connector-arrow">
+                        <k-icon name="chevron-down" />
+                      </div>
+                      <div class="connector-line"></div>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- 底部说明 -->
+                <div class="pipeline-footer">
+                  <div class="footer-item">
+                    <span class="dot active"></span>
+                    <span>启用 - 中间件将在请求中执行</span>
+                  </div>
+                  <div class="footer-item">
+                    <span class="dot"></span>
+                    <span>禁用 - 中间件将被跳过</span>
+                  </div>
+                  <div class="footer-item">
+                    <span class="dot override"></span>
+                    <span>已覆盖 - 与全局配置不同</span>
                   </div>
                 </div>
               </div>
 
-              <!-- 空状态 -->
-              <div v-else class="empty-phase">
-                <span>无中间件</span>
-              </div>
-
-              <!-- 阶段间连接箭头 -->
-              <div v-if="phaseIndex < phases.length - 1" class="phase-connector">
-                <div class="connector-line"></div>
-                <div class="connector-arrow">
-                  <k-icon name="chevron-down" />
+              <!-- 插件配置 -->
+              <div v-show="activeTab === 'plugins'" class="content-section">
+                <div class="section-header">
+                  <h4>插件配置覆盖</h4>
+                  <p>为此渠道单独配置插件参数</p>
                 </div>
-                <div class="connector-line"></div>
+
+                <div class="override-hint-bar">
+                  <k-icon name="info-circle" />
+                  <span>留空使用全局配置，填写后将覆盖全局设置</span>
+                </div>
+
+                <div v-if="pluginsWithConfig.length > 0" class="plugins-override-list">
+                  <div
+                    v-for="plugin in pluginsWithConfig"
+                    :key="plugin.id"
+                    class="plugin-override-card"
+                    :class="{ expanded: expandedPlugins.has(plugin.id) }"
+                  >
+                    <div class="plugin-header" @click="togglePluginExpand(plugin.id)">
+                      <div class="plugin-info">
+                        <span class="plugin-name">{{ plugin.name }}</span>
+                        <span v-if="hasPluginOverride(plugin.id)" class="override-badge">已覆盖</span>
+                      </div>
+                      <div class="plugin-actions">
+                        <k-button
+                          v-if="hasPluginOverride(plugin.id)"
+                          size="mini"
+                          @click.stop="clearPluginOverride(plugin.id)"
+                        >
+                          清除
+                        </k-button>
+                        <k-icon :name="expandedPlugins.has(plugin.id) ? 'chevron-up' : 'chevron-down'" />
+                      </div>
+                    </div>
+
+                    <div v-show="expandedPlugins.has(plugin.id)" class="plugin-config-fields">
+                      <ConfigRenderer
+                        :fields="getPluginOverrideFields(plugin)"
+                        :model-value="getPluginOverrideConfig(plugin.id)"
+                        @update:model-value="updatePluginOverrideConfig(plugin.id, $event)"
+                        :override-mode="true"
+                        :default-values="plugin.config"
+                        :show-nav="false"
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                <div v-else class="empty-hint">
+                  <k-icon name="apps" />
+                  <span>暂无可配置的插件</span>
+                </div>
               </div>
             </div>
           </div>
 
-          <!-- 底部说明 -->
-          <div class="pipeline-footer">
-            <div class="footer-item">
-              <span class="dot active"></span>
-              <span>启用 - 中间件将在请求中执行</span>
-            </div>
-            <div class="footer-item">
-              <span class="dot"></span>
-              <span>禁用 - 中间件将被跳过</span>
-            </div>
-            <div class="footer-item">
-              <span class="dot override"></span>
-              <span>已覆盖 - 与全局配置不同</span>
-            </div>
+          <div class="dialog-footer">
+            <k-button @click="visible = false">取消</k-button>
+            <k-button type="primary" @click="handleSave" :loading="saving">
+              {{ isEdit ? '保存' : '创建' }}
+            </k-button>
           </div>
         </div>
 
-        <!-- 插件配置 -->
-        <div v-show="activeTab === 'plugins'" class="content-section">
-          <div class="section-header">
-            <h4>插件配置覆盖</h4>
-            <p>为此渠道单独配置插件参数</p>
+        <!-- 右侧连接器选择面板（始终可见） -->
+        <div class="connector-side-panel">
+          <div class="side-panel-header">
+            <k-icon name="puzzle" />
+            <span>选择连接器</span>
           </div>
 
-          <div class="override-hint-bar">
-            <k-icon name="info-circle" />
-            <span>留空使用全局配置，填写后将覆盖全局设置</span>
-          </div>
-
-          <div v-if="pluginsWithConfig.length > 0" class="plugins-override-list">
+          <!-- 分类筛选 -->
+          <div class="category-tabs">
             <div
-              v-for="plugin in pluginsWithConfig"
-              :key="plugin.id"
-              class="plugin-override-card"
-              :class="{ expanded: expandedPlugins.has(plugin.id) }"
+              v-for="category in connectorCategories"
+              :key="category.id"
+              class="category-tab"
+              :class="{ active: activeConnectorCategory === category.id }"
+              @click="activeConnectorCategory = category.id"
             >
-              <div class="plugin-header" @click="togglePluginExpand(plugin.id)">
-                <div class="plugin-info">
-                  <span class="plugin-name">{{ plugin.name }}</span>
-                  <span v-if="hasPluginOverride(plugin.id)" class="override-badge">已覆盖</span>
-                </div>
-                <div class="plugin-actions">
-                  <k-button
-                    v-if="hasPluginOverride(plugin.id)"
-                    size="mini"
-                    @click.stop="clearPluginOverride(plugin.id)"
-                  >
-                    清除
-                  </k-button>
-                  <k-icon :name="expandedPlugins.has(plugin.id) ? 'chevron-up' : 'chevron-down'" />
-                </div>
+              <k-icon :name="category.icon" />
+              <span>{{ category.label }}</span>
+            </div>
+          </div>
+
+          <!-- 搜索框 -->
+          <div class="search-box">
+            <k-icon name="search" />
+            <input
+              v-model="connectorSearch"
+              type="text"
+              placeholder="搜索..."
+              class="search-input"
+            />
+          </div>
+
+          <!-- 连接器列表 -->
+          <div class="connector-list">
+            <div
+              v-for="connector in filteredConnectors"
+              :key="connector.id"
+              class="connector-card"
+              :class="{ selected: form.connectorId === connector.id }"
+              @click="handleConnectorSelect(connector)"
+            >
+              <!-- 选中标记 -->
+              <div v-if="form.connectorId === connector.id" class="selected-check">
+                <k-icon name="check" />
               </div>
 
-              <div v-show="expandedPlugins.has(plugin.id)" class="plugin-config-fields">
-                <ConfigRenderer
-                  :fields="getPluginOverrideFields(plugin)"
-                  :model-value="getPluginOverrideConfig(plugin.id)"
-                  @update:model-value="updatePluginOverrideConfig(plugin.id, $event)"
-                  :override-mode="true"
-                  :default-values="plugin.config"
-                  :show-nav="false"
+              <!-- 图标 -->
+              <div class="card-logo" :class="getConnectorLogoClass(connector)">
+                <img
+                  :src="getConnectorIconUrl(connector)"
+                  :alt="connector.name"
+                  class="logo-img"
+                  @error="handleIconError"
                 />
               </div>
+
+              <!-- 信息 -->
+              <div class="card-info">
+                <div class="card-name">{{ connector.name }}</div>
+                <div class="card-desc">{{ connector.description || getConnectorDefaultDesc(connector) }}</div>
+              </div>
+
+              <!-- 类型标签 -->
+              <div class="card-types">
+                <span
+                  v-for="type in connector.supportedTypes"
+                  :key="type"
+                  class="type-dot"
+                  :class="type"
+                  :title="getTypeLabel(type)"
+                ></span>
+              </div>
+            </div>
+
+            <!-- 空状态 -->
+            <div v-if="filteredConnectors.length === 0" class="empty-connectors">
+              <k-icon name="inbox" />
+              <span>未找到连接器</span>
             </div>
           </div>
 
-          <div v-else class="empty-hint">
-            <k-icon name="apps" />
-            <span>暂无可配置的插件</span>
+          <!-- 底部统计 -->
+          <div class="side-panel-footer">
+            共 {{ connectors.length }} 个连接器
           </div>
         </div>
       </div>
-    </div>
-
-    <template #footer>
-      <div class="dialog-footer">
-        <k-button @click="visible = false">取消</k-button>
-        <k-button type="primary" @click="handleSave" :loading="saving">
-          {{ isEdit ? '保存' : '创建' }}
-        </k-button>
-      </div>
-    </template>
-  </el-dialog>
+    </Transition>
+  </Teleport>
 </template>
 
 <script setup lang="ts">
@@ -277,6 +372,19 @@ const isEdit = computed(() => !!props.channel?.id)
 const activeTab = ref('basic')
 const saving = ref(false)
 const expandedPlugins = ref(new Set<string>())
+
+// 连接器选择面板状态
+const activeConnectorCategory = ref('all')
+const connectorSearch = ref('')
+const connectorFieldsLoading = ref(false)
+
+// 连接器分类定义
+const connectorCategories = [
+  { id: 'all', label: '全部', icon: 'grid' },
+  { id: 'image', label: '图片', icon: 'image' },
+  { id: 'audio', label: '音频', icon: 'volume-2' },
+  { id: 'video', label: '视频', icon: 'video' }
+]
 
 // 数据
 const connectors = ref<ConnectorDefinition[]>([])
@@ -364,6 +472,98 @@ const tagSuggestions = computed(() => {
   const allTags = new Set([...PRESET_TAGS, ...connectorTags])
   return Array.from(allTags)
 })
+
+// ============ 连接器选择面板相关 ============
+
+// 过滤后的连接器列表
+const filteredConnectors = computed(() => {
+  let list = connectors.value
+
+  // 分类过滤
+  if (activeConnectorCategory.value !== 'all') {
+    list = list.filter(c => c.supportedTypes.includes(activeConnectorCategory.value))
+  }
+
+  // 搜索过滤
+  if (connectorSearch.value.trim()) {
+    const query = connectorSearch.value.toLowerCase()
+    list = list.filter(c =>
+      c.name.toLowerCase().includes(query) ||
+      (c.description && c.description.toLowerCase().includes(query))
+    )
+  }
+
+  return list
+})
+
+// 获取连接器 Logo 背景类
+const getConnectorLogoClass = (connector: ConnectorDefinition): string => {
+  if (connector.supportedTypes.includes('audio')) return 'logo-audio'
+  if (connector.supportedTypes.includes('video')) return 'logo-video'
+  return 'logo-image'
+}
+
+// 获取连接器默认图标
+const getConnectorDefaultIcon = (connector: ConnectorDefinition): string => {
+  if (connector.supportedTypes.includes('audio')) return 'volume-2'
+  if (connector.supportedTypes.includes('video')) return 'video'
+  return 'image'
+}
+
+// 获取连接器图标 URL
+const getConnectorIconUrl = (connector: ConnectorDefinition): string => {
+  // 如果有自定义图标名称，尝试加载对应图标
+  // 优先尝试 SVG，部分旧图标使用 PNG
+  if (connector.icon) {
+    // chatluna 和 edge-tts 使用 PNG 格式
+    if (connector.icon === 'chatluna' || connector.icon === 'edge-tts') {
+      return new URL(`../assets/connector-icons/${connector.icon}.png`, import.meta.url).href
+    }
+    // 其他图标使用 SVG 格式
+    return new URL(`../assets/connector-icons/${connector.icon}.svg`, import.meta.url).href
+  }
+  // 根据类型返回默认图标
+  if (connector.supportedTypes.includes('audio')) {
+    return new URL('../assets/connector-icons/default-audio.svg', import.meta.url).href
+  }
+  if (connector.supportedTypes.includes('video')) {
+    return new URL('../assets/connector-icons/default-video.svg', import.meta.url).href
+  }
+  return new URL('../assets/connector-icons/default-image.svg', import.meta.url).href
+}
+
+// 图标加载失败时使用默认图标
+const handleIconError = (event: Event) => {
+  const img = event.target as HTMLImageElement
+  const connector = connectors.value.find(c => c.name === img.alt)
+  if (connector) {
+    // 根据类型使用默认图标
+    if (connector.supportedTypes.includes('audio')) {
+      img.src = new URL('../assets/connector-icons/default-audio.svg', import.meta.url).href
+    } else if (connector.supportedTypes.includes('video')) {
+      img.src = new URL('../assets/connector-icons/default-video.svg', import.meta.url).href
+    } else {
+      img.src = new URL('../assets/connector-icons/default-image.svg', import.meta.url).href
+    }
+  }
+}
+
+// 获取连接器默认描述
+const getConnectorDefaultDesc = (connector: ConnectorDefinition): string => {
+  if (connector.supportedTypes.includes('audio')) return '语音合成服务'
+  if (connector.supportedTypes.includes('video')) return '视频生成服务'
+  return '图像生成服务'
+}
+
+// 获取类型标签
+const getTypeLabel = (type: string): string => {
+  switch (type) {
+    case 'image': return '图片'
+    case 'audio': return '音频'
+    case 'video': return '视频'
+    default: return type
+  }
+}
 
 // ============ 远程选项相关方法 ============
 
@@ -569,8 +769,6 @@ const updatePluginOverrideConfig = (pluginId: string, config: Record<string, any
 }
 
 const handleConnectorChange = async (connectorId: string) => {
-  form.value.connectorConfig = {}
-
   // 仅在创建新渠道时自动填充连接器默认标签
   if (!isEdit.value && connectorId) {
     const connector = connectors.value.find(c => c.id === connectorId)
@@ -581,13 +779,25 @@ const handleConnectorChange = async (connectorId: string) => {
   }
 
   if (connectorId && !connectorFields.value[connectorId]) {
+    connectorFieldsLoading.value = true
     try {
       const fields = await connectorApi.fields(connectorId)
       connectorFields.value[connectorId] = fields
     } catch (e) {
       console.error('Failed to load connector fields:', e)
+    } finally {
+      connectorFieldsLoading.value = false
     }
   }
+
+  // 在加载完成后再清空配置，避免闪烁
+  form.value.connectorConfig = {}
+}
+
+// 处理连接器选择
+const handleConnectorSelect = (connector: ConnectorDefinition) => {
+  form.value.connectorId = connector.id
+  handleConnectorChange(connector.id)
 }
 
 const handleSave = async () => {
@@ -683,18 +893,91 @@ watch(() => props.modelValue, async (newVal) => {
 </script>
 
 <style scoped>
-.channel-config-dialog :deep(.el-dialog__body) {
-  padding: 0;
+/* ============ 整体容器布局 ============ */
+.channel-config-container {
+  position: fixed;
+  inset: 0;
+  z-index: 2000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 20px;
+}
+
+.overlay {
+  position: absolute;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.5);
+  backdrop-filter: blur(4px);
+}
+
+/* ============ 主对话框 ============ */
+.main-dialog {
+  position: relative;
+  width: 800px;
+  height: 80vh;
+  max-height: 800px;
+  background: var(--k-card-bg);
+  border-radius: 12px;
+  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.25);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.dialog-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 20px;
+  border-bottom: 1px solid var(--k-color-border);
+  background: var(--k-color-bg-2);
+}
+
+.dialog-title {
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--k-color-text);
+}
+
+.close-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border: none;
+  background: transparent;
+  border-radius: 6px;
+  cursor: pointer;
+  color: var(--k-color-text-description);
+  transition: all 0.2s;
+}
+
+.close-btn:hover {
+  background: var(--k-color-bg-1);
+  color: var(--k-color-text);
 }
 
 .dialog-layout {
   display: flex;
+  flex: 1;
+  min-height: 0;
   height: 560px;
 }
 
-/* Tab 导航 */
+.dialog-footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+  padding: 16px 20px;
+  border-top: 1px solid var(--k-color-border);
+  background: var(--k-color-bg-2);
+}
+
+/* ============ Tab 导航 ============ */
 .tab-nav {
-  width: 180px;
+  width: 160px;
   flex-shrink: 0;
   background: var(--k-color-bg-2);
   border-right: 1px solid var(--k-color-border);
@@ -705,7 +988,7 @@ watch(() => props.modelValue, async (newVal) => {
   display: flex;
   align-items: center;
   gap: 10px;
-  padding: 12px 20px;
+  padding: 12px 16px;
   cursor: pointer;
   color: var(--k-color-text-description);
   transition: all 0.2s;
@@ -745,13 +1028,12 @@ watch(() => props.modelValue, async (newVal) => {
   color: white;
 }
 
-/* 内容区 */
+/* ============ 内容区 ============ */
 .tab-content {
   flex: 1;
   overflow-y: auto;
   padding: 1.5rem;
   background: var(--k-card-bg);
-  /* 隐藏式滚动条 */
   scrollbar-width: thin;
   scrollbar-color: transparent transparent;
 }
@@ -778,7 +1060,7 @@ watch(() => props.modelValue, async (newVal) => {
 }
 
 .content-section {
-  max-width: 560px;
+  max-width: 520px;
 }
 
 .section-header {
@@ -798,7 +1080,7 @@ watch(() => props.modelValue, async (newVal) => {
   color: var(--k-color-text-description);
 }
 
-/* 表单 */
+/* ============ 表单样式 ============ */
 .form-group {
   margin-bottom: 1.25rem;
 }
@@ -832,6 +1114,24 @@ watch(() => props.modelValue, async (newVal) => {
   color: var(--k-color-text-description);
 }
 
+/* 连接器显示 */
+.connector-display {
+  padding: 10px 12px;
+  border: 1px solid var(--k-color-border);
+  border-radius: 6px;
+  background: var(--k-color-bg-2);
+}
+
+.connector-name {
+  font-weight: 500;
+  color: var(--k-color-text);
+}
+
+.connector-placeholder {
+  color: var(--k-color-text-description);
+  font-style: italic;
+}
+
 .switch-wrapper {
   display: flex;
   align-items: center;
@@ -844,7 +1144,6 @@ watch(() => props.modelValue, async (newVal) => {
   color: var(--k-color-text-description);
 }
 
-/* 分隔线 */
 .section-divider {
   display: flex;
   align-items: center;
@@ -870,6 +1169,32 @@ watch(() => props.modelValue, async (newVal) => {
   margin-left: 12px;
 }
 
+/* 加载提示 */
+.loading-hint {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 16px;
+  color: var(--k-color-text-description);
+  font-size: 13px;
+}
+
+.loading-hint .k-icon.spin {
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+.empty-config-hint {
+  padding: 16px;
+  color: var(--k-color-text-description);
+  font-size: 13px;
+  font-style: italic;
+}
+
 .empty-hint {
   display: flex;
   flex-direction: column;
@@ -885,7 +1210,6 @@ watch(() => props.modelValue, async (newVal) => {
   opacity: 0.5;
 }
 
-/* 覆盖提示栏 */
 .override-hint-bar {
   display: flex;
   align-items: center;
@@ -902,7 +1226,7 @@ watch(() => props.modelValue, async (newVal) => {
   color: var(--k-color-active);
 }
 
-/* 中间件流程 */
+/* ============ 中间件流程 ============ */
 .pipeline-flow {
   display: flex;
   flex-direction: column;
@@ -1125,7 +1449,7 @@ watch(() => props.modelValue, async (newVal) => {
   background: var(--k-color-active);
 }
 
-/* 插件配置列表 */
+/* ============ 插件配置 ============ */
 .plugins-override-list {
   display: flex;
   flex-direction: column;
@@ -1188,41 +1512,344 @@ watch(() => props.modelValue, async (newVal) => {
   border-top: 1px solid var(--k-color-border);
 }
 
-.override-field-row {
-  margin-bottom: 1rem;
+/* ============ 右侧连接器选择面板 ============ */
+.connector-side-panel {
+  position: relative;
+  width: 340px;
+  height: 80vh;
+  max-height: 800px;
+  background: var(--k-card-bg);
+  border-radius: 12px;
+  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.25);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
 }
 
-.override-field-row:last-child {
-  margin-bottom: 0;
+.side-panel-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 16px 20px;
+  border-bottom: 1px solid var(--k-color-border);
+  background: var(--k-color-bg-2);
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--k-color-text);
 }
 
-.field-label {
-  display: block;
-  margin-bottom: 6px;
+.side-panel-header .k-icon {
+  font-size: 18px;
+  color: var(--k-color-active);
+}
+
+/* 分类标签 */
+.category-tabs {
+  display: flex;
+  gap: 6px;
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--k-color-border);
+}
+
+.category-tab {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  padding: 6px 12px;
+  border-radius: 16px;
+  cursor: pointer;
+  font-size: 12px;
+  color: var(--k-color-text-description);
+  background: var(--k-color-bg-2);
+  transition: all 0.2s;
+  flex: 1;
+}
+
+.category-tab:hover {
+  background: var(--k-color-bg-1);
+}
+
+.category-tab.active {
+  background: var(--k-color-active);
+  color: white;
+}
+
+.category-tab .k-icon {
+  font-size: 14px;
+}
+
+.category-count {
+  font-size: 10px;
+  opacity: 0.8;
+}
+
+/* 搜索框 */
+.search-box {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 12px 16px;
+  padding: 8px 12px;
+  background: var(--k-color-bg-2);
+  border: 1px solid var(--k-color-border);
+  border-radius: 8px;
+  transition: all 0.2s;
+}
+
+.search-box:focus-within {
+  border-color: var(--k-color-active);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--k-color-active) 15%, transparent);
+}
+
+.search-box .k-icon {
+  color: var(--k-color-text-description);
+  font-size: 14px;
+}
+
+.search-input {
+  flex: 1;
+  border: none;
+  background: transparent;
+  outline: none;
   font-size: 13px;
   color: var(--k-color-text);
-  font-weight: 500;
 }
 
-.field-input {
-  width: 100%;
-}
-
-.field-input .el-select,
-.field-input .el-input {
-  width: 100%;
-}
-
-.field-hint {
-  margin-top: 4px;
-  font-size: 12px;
+.search-input::placeholder {
   color: var(--k-color-text-description);
 }
 
-/* 底部按钮 */
-.dialog-footer {
+/* 连接器列表 */
+.connector-list {
+  flex: 1;
+  overflow-y: auto;
+  padding: 8px 12px;
+  scrollbar-width: thin;
+  scrollbar-color: transparent transparent;
+}
+
+.connector-list:hover {
+  scrollbar-color: var(--k-color-border) transparent;
+}
+
+.connector-list::-webkit-scrollbar {
+  width: 4px;
+}
+
+.connector-list::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.connector-list::-webkit-scrollbar-thumb {
+  background-color: transparent;
+  border-radius: 2px;
+}
+
+.connector-list:hover::-webkit-scrollbar-thumb {
+  background-color: var(--k-color-border);
+}
+
+/* 连接器卡片 */
+.connector-card {
+  position: relative;
   display: flex;
-  justify-content: flex-end;
+  align-items: flex-start;
   gap: 12px;
+  padding: 12px;
+  margin-bottom: 8px;
+  background: var(--k-color-bg-2);
+  border: 2px solid transparent;
+  border-radius: 10px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.connector-card:hover {
+  background: var(--k-color-bg-1);
+  border-color: var(--k-color-border);
+}
+
+.connector-card.selected {
+  background: color-mix(in srgb, var(--k-color-active) 8%, var(--k-color-bg-2));
+  border-color: var(--k-color-active);
+}
+
+.selected-check {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  width: 20px;
+  height: 20px;
+  background: var(--k-color-active);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+  font-size: 10px;
+}
+
+/* Logo */
+.card-logo {
+  width: 40px;
+  height: 40px;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  overflow: hidden;
+}
+
+.card-logo.logo-image {
+  background: linear-gradient(135deg, rgba(16, 185, 129, 0.15), rgba(16, 185, 129, 0.05));
+}
+
+.card-logo.logo-audio {
+  background: linear-gradient(135deg, rgba(139, 92, 246, 0.15), rgba(139, 92, 246, 0.05));
+}
+
+.card-logo.logo-video {
+  background: linear-gradient(135deg, rgba(245, 158, 11, 0.15), rgba(245, 158, 11, 0.05));
+}
+
+.logo-svg {
+  width: 24px;
+  height: 24px;
+}
+
+.logo-svg :deep(svg) {
+  width: 100%;
+  height: 100%;
+}
+
+.logo-img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
+.logo-icon {
+  font-size: 20px;
+}
+
+.logo-image .logo-icon {
+  color: #10b981;
+}
+
+.logo-audio .logo-icon {
+  color: #8b5cf6;
+}
+
+.logo-video .logo-icon {
+  color: #f59e0b;
+}
+
+/* 信息 */
+.card-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.card-name {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--k-color-text);
+  margin-bottom: 4px;
+}
+
+.card-desc {
+  font-size: 11px;
+  color: var(--k-color-text-description);
+  line-height: 1.4;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+/* 类型点 */
+.card-types {
+  display: flex;
+  gap: 4px;
+  flex-shrink: 0;
+  padding-top: 4px;
+}
+
+.type-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--k-color-text-description);
+}
+
+.type-dot.image {
+  background: #10b981;
+}
+
+.type-dot.audio {
+  background: #8b5cf6;
+}
+
+.type-dot.video {
+  background: #f59e0b;
+}
+
+/* 空状态 */
+.empty-connectors {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 32px;
+  color: var(--k-color-text-description);
+  font-size: 13px;
+}
+
+.empty-connectors .k-icon {
+  font-size: 32px;
+  opacity: 0.4;
+}
+
+/* 底部 */
+.side-panel-footer {
+  padding: 12px 16px;
+  border-top: 1px solid var(--k-color-border);
+  background: var(--k-color-bg-2);
+  font-size: 12px;
+  color: var(--k-color-text-description);
+  text-align: center;
+}
+
+/* ============ 过渡动画 ============ */
+.dialog-slide-enter-active,
+.dialog-slide-leave-active {
+  transition: all 0.3s ease;
+}
+
+.dialog-slide-enter-active .main-dialog,
+.dialog-slide-enter-active .connector-side-panel,
+.dialog-slide-leave-active .main-dialog,
+.dialog-slide-leave-active .connector-side-panel {
+  transition: all 0.3s ease;
+}
+
+.dialog-slide-enter-from,
+.dialog-slide-leave-to {
+  opacity: 0;
+}
+
+.dialog-slide-enter-from .main-dialog,
+.dialog-slide-leave-to .main-dialog {
+  transform: translateX(-30px);
+  opacity: 0;
+}
+
+.dialog-slide-enter-from .connector-side-panel,
+.dialog-slide-leave-to .connector-side-panel {
+  transform: translateX(30px);
+  opacity: 0;
 }
 </style>

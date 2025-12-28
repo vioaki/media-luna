@@ -123,6 +123,8 @@ async function generate(
 export const ChatLunaConnector: ConnectorDefinition = {
   id: 'chatluna',
   name: 'ChatLuna',
+  description: '集成 ChatLuna 插件，复用已配置的模型和平台',
+  icon: 'chatluna',
   supportedTypes: ['image'],
   fields: connectorFields,
   cardFields: connectorCardFields,

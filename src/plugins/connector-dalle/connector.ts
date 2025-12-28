@@ -78,6 +78,8 @@ async function generate(
 export const DalleConnector: ConnectorDefinition = {
   id: 'dalle',
   name: 'DALL-E',
+  description: 'OpenAI 图像生成模型，支持 DALL-E 3 高质量图像创作',
+  icon: 'dalle',
   supportedTypes: ['image'],
   fields: connectorFields,
   cardFields: connectorCardFields,

@@ -181,7 +181,7 @@ declare module '@koishijs/client' {
     'media-luna/tasks/recent': (params: { userId: number, limit?: number }) => ApiResponse<TaskData[]>
 
     // 连接器
-    'media-luna/connectors/list': () => ApiResponse<{ id: string, name: string, supportedTypes: string[] }[]>
+    'media-luna/connectors/list': () => ApiResponse<{ id: string, name: string, description?: string, icon?: string, supportedTypes: string[], defaultTags?: string[] }[]>
     'media-luna/connectors/get': (params: { id: string }) => ApiResponse<ConnectorDefinition>
     'media-luna/connectors/fields': (params: { id: string }) => ApiResponse<ConfigField[]>
     'media-luna/connectors/schema': () => ApiResponse<any[]>

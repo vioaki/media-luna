@@ -266,6 +266,20 @@ export interface ConnectorDefinition {
   cardFields?: CardDisplayField[]
 
   /**
+   * 连接器描述
+   * 显示在连接器选择器中，简要说明连接器的功能和特点
+   */
+  description?: string
+
+  /**
+   * 连接器图标名称
+   * 对应 client/assets/connector-icons/ 目录下的图标文件名（不含扩展名）
+   * 例如：'chatluna' 对应 chatluna.png
+   * 如果未设置，将根据 supportedTypes 使用默认图标
+   */
+  icon?: string
+
+  /**
    * 默认标签
    * 创建渠道时自动填充的标签
    * 标签用于匹配预设：text2img, img2img, text2video, img2video, text2audio

@@ -171,6 +171,8 @@ async function generate(
 export const SunoConnector: ConnectorDefinition = {
   id: 'suno',
   name: 'Suno AI',
+  description: 'AI 音乐生成，根据提示词创作完整歌曲',
+  icon: 'suno',
   supportedTypes: ['audio'],
   fields: connectorFields,
   cardFields: connectorCardFields,

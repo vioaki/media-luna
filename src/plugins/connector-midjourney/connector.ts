@@ -133,6 +133,8 @@ async function generate(
 export const MidjourneyConnector: ConnectorDefinition = {
   id: 'midjourney',
   name: 'Midjourney (Proxy)',
+  description: '通过代理 API 调用 Midjourney，支持 V5/V6 模型',
+  icon: 'midjourney',
   supportedTypes: ['image'],
   fields: connectorFields,
   cardFields: connectorCardFields,

@@ -35,60 +35,89 @@ export default definePlugin({
 
     // 使用实例级 Map/Array 存储 dispose 函数，而不是模块级变量
     // 这样每次插件重载都会创建新的存储，避免状态残留
-    const channelCommandDisposables = new Map<string, () => void>()
+    // key: channel.id (string), value: { dispose, commandName }
+    const channelCommandDisposables = new Map<string, { dispose: () => void; commandName: string }>()
     const presetCommandDisposables: Array<() => void> = []
 
     // 保存 mediaLuna 引用
     let mediaLunaRef: any = null
 
-    // 刷新生成指令的函数
+    // 获取系统保留指令名（不允许渠道使用这些名称）
+    const getReservedCommandNames = (): Set<string> => {
+      const reserved = new Set<string>()
+      // 本插件注册的指令
+      reserved.add(config.presetsCommand.toLowerCase())
+      reserved.add(config.presetCommand.toLowerCase())
+      reserved.add(config.modelsCommand.toLowerCase())
+      reserved.add(config.myTasksCommand.toLowerCase())
+      reserved.add(config.taskDetailCommand.toLowerCase())
+      // Koishi 内置指令
+      reserved.add('help')
+      reserved.add('status')
+      reserved.add('echo')
+      reserved.add('broadcast')
+      // LoRA 相关指令
+      reserved.add('loras')
+      return reserved
+    }
+
+    // 刷新生成指令的函数（清除重建策略）
     const refreshGenerateCommands = async () => {
       if (!mediaLunaRef) {
         logger.warn('MediaLuna service not available')
         return
       }
 
-      // 获取当前渠道-预设组合
-      const combinations = await mediaLunaRef.getChannelPresetCombinations()
-      const currentChannelIds = new Set(combinations.map((c: any) => c.channel.id))
-
-      // 注销已删除或禁用的渠道指令
-      for (const [channelId, dispose] of channelCommandDisposables) {
-        if (!currentChannelIds.has(channelId)) {
-          try {
-            dispose()
-          } catch (e) {
-            // ignore
-          }
-          channelCommandDisposables.delete(channelId)
-          logger.debug(`Unregistered command for channel: ${channelId}`)
+      // 第一步：清除所有已注册的渠道指令
+      for (const [channelId, { dispose, commandName }] of channelCommandDisposables) {
+        try {
+          dispose()
+        } catch (e) {
+          // ignore
         }
+        logger.debug(`Unregistered command: ${commandName} (channel: ${channelId})`)
       }
+      channelCommandDisposables.clear()
 
-      // 注册新渠道或更新已有渠道
+      // 第二步：获取当前渠道-预设组合
+      const combinations = await mediaLunaRef.getChannelPresetCombinations()
+
+      // 第三步：获取保留指令名
+      const reservedNames = getReservedCommandNames()
+
+      // 第四步：记录本轮已注册的指令名（用于检测渠道间重名）
+      const registeredInThisRound = new Set<string>()
+
+      // 第五步：注册渠道指令
       for (const { channel, presets } of combinations) {
-        // 如果已注册，先注销
-        if (channelCommandDisposables.has(channel.id)) {
-          try {
-            channelCommandDisposables.get(channel.id)!()
-          } catch (e) {
-            // ignore
-          }
-          channelCommandDisposables.delete(channel.id)
-        }
+        const commandName = channel.name
+        const commandNameLower = commandName.toLowerCase()
 
         // 检查渠道级配置是否禁用了 koishi-commands
         if (!mediaLunaRef.isPluginEnabledForChannel('koishi-commands', channel)) {
-          logger.debug(`Channel ${channel.name}: koishi-commands disabled, skipping`)
+          logger.debug(`Channel ${commandName}: koishi-commands disabled, skipping`)
+          continue
+        }
+
+        // 检查是否与保留指令冲突
+        if (reservedNames.has(commandNameLower)) {
+          logger.warn(`Channel "${commandName}" conflicts with reserved command, skipping`)
+          continue
+        }
+
+        // 检查是否与其他渠道重名（同名只注册第一个）
+        if (registeredInThisRound.has(commandNameLower)) {
+          logger.warn(`Channel "${commandName}" (id: ${channel.id}) has duplicate name, skipping`)
           continue
         }
 
         // 注册渠道指令
         const dispose = registerChannelCommand(ctx, mediaLunaRef, channel, presets, config, logger)
-        channelCommandDisposables.set(channel.id, dispose)
+        channelCommandDisposables.set(channel.id, { dispose, commandName })
+        registeredInThisRound.add(commandNameLower)
       }
 
-      logger.info(`Refreshed generate commands: ${channelCommandDisposables.size} channels`)
+      logger.info(`Refreshed generate commands: ${channelCommandDisposables.size} channels registered`)
     }
 
     // 注册预设指令的函数
@@ -520,7 +549,7 @@ export default definePlugin({
       logger.debug('Disposing koishi-commands: %d channel commands, %d preset commands',
         channelCommandDisposables.size, presetCommandDisposables.length)
 
-      for (const dispose of channelCommandDisposables.values()) {
+      for (const { dispose } of channelCommandDisposables.values()) {
         try {
           dispose()
         } catch (e) {
@@ -563,8 +592,21 @@ function registerChannelCommand(
 
   // 注册渠道指令（使用 rest 参数捕获所有输入）
   // 注意：presets 参数仅用于初始 usage 显示，实际预设匹配在执行时实时查询
+  //
+  // 重要：Koishi 的 ctx.command() 在命令已存在时会返回现有命令对象
+  // 此时再调用 .option() 会导致 duplicate option 错误
+  // 因此需要检查命令是否已存在，或者选项是否已注册
   const channelCmd = ctx.command(`${channel.name} [...rest:string]`, `${channel.name} 生成`)
-    .option('image', '-i <url:string> 输入图片URL')
+
+  // 安全添加选项：检查选项是否已存在，避免重复注册
+  // Koishi Command 对象的 _options 存储了已注册的选项
+  const existingOptions = (channelCmd as any)._options || {}
+  if (!existingOptions['image']) {
+    channelCmd.option('image', '-i <url:string> 输入图片URL')
+  }
+
+  // 设置用法说明和动作处理器
+  channelCmd
     .usage(`用法: ${channel.name} [预设名] <提示词>\n可用预设: ${presets.map((p: any) => p.name).join(', ') || '无'}`)
     .action(async ({ session, options }: { session: Session; options: any }) => {
       // 初始化收集状态（预设名稍后解析）
