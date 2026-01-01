@@ -1,12 +1,12 @@
-// Prompt Encoding 中间件
-// 将 prompt 转换为 Unicode 转义序列以绕过内容审核
+// 审核绕过中间件
+// 通过前置提示词注入和 Unicode 编码绕过内容审核
 
 import {
   MiddlewareDefinition,
   MiddlewareContext,
   MiddlewareRunStatus
 } from '../../types'
-import { PromptEncodingConfig, defaultPromptEncodingConfig } from './config'
+import { CensorBypassConfig, defaultCensorBypassConfig } from './config'
 
 /**
  * 判断字符是否为中文
@@ -67,7 +67,7 @@ function encodeCharUrl(char: string): string {
 /**
  * 根据配置编码 prompt
  */
-function encodePrompt(prompt: string, config: PromptEncodingConfig): string {
+function encodePrompt(prompt: string, config: CensorBypassConfig): string {
   if (!config.enableUnicodeEscape) {
     return prompt
   }
@@ -119,53 +119,86 @@ function encodePrompt(prompt: string, config: PromptEncodingConfig): string {
 }
 
 /**
- * 创建 Prompt Encoding 中间件
+ * 创建审核绕过中间件
  */
-export function createPromptEncodingMiddleware(): MiddlewareDefinition {
+export function createCensorBypassMiddleware(): MiddlewareDefinition {
   return {
-    name: 'prompt-encoding',
-    displayName: 'Prompt Unicode 编码',
-    description: '将 prompt 转换为 Unicode 转义序列以绕过内容审核',
+    name: 'prompt-censor-bypass',
+    displayName: '审核绕过',
+    description: '通过前置提示词注入和 Unicode 编码绕过内容审核',
     category: 'transform',
     phase: 'lifecycle-pre-request',
     after: ['preset'], // 确保在预设处理之后运行
 
     async execute(mctx: MiddlewareContext, next) {
       // 获取配置
-      const mwConfig = await mctx.getMiddlewareConfig<PromptEncodingConfig>('prompt-encoding')
-      const config: PromptEncodingConfig = {
-        ...defaultPromptEncodingConfig,
+      const mwConfig = await mctx.getMiddlewareConfig<CensorBypassConfig>('prompt-censor-bypass')
+      const config: CensorBypassConfig = {
+        ...defaultCensorBypassConfig,
         ...(mwConfig || {})
       }
 
+      // 解析匹配标签
+      const matchTags = config.matchChannelTags
+        ? config.matchChannelTags.split(',').map(t => t.trim().toLowerCase()).filter(Boolean)
+        : []
+
+      // 获取渠道标签
+      const channelTags = (mctx.channel?.tags || []).map(t => t.toLowerCase())
+
+      // 检查是否匹配渠道标签
+      const shouldApply = matchTags.length === 0 || matchTags.some(tag => channelTags.includes(tag))
+
       // 调试日志：输出配置
-      mctx.setMiddlewareLog('prompt-encoding-debug', {
+      mctx.setMiddlewareLog('prompt-censor-bypass-debug', {
         mwConfigReceived: !!mwConfig,
-        enableUnicodeEscape: config.enableUnicodeEscape,
-        encodeRange: config.encodeRange,
-        escapeFormat: config.escapeFormat
+        matchTags,
+        channelTags,
+        shouldApply,
+        enablePrefixPrompt: config.enablePrefixPrompt,
+        enableUnicodeEscape: config.enableUnicodeEscape
       })
 
-      // 如果未启用，直接跳过
-      if (!config.enableUnicodeEscape) {
-        mctx.setMiddlewareLog('prompt-encoding', { skipped: true, reason: 'enableUnicodeEscape is false' })
+      // 如果不匹配渠道标签，跳过
+      if (!shouldApply) {
+        mctx.setMiddlewareLog('prompt-censor-bypass', { skipped: true, reason: 'channel tags not matched' })
+        return next()
+      }
+
+      // 如果两个功能都未启用，直接跳过
+      if (!config.enablePrefixPrompt && !config.enableUnicodeEscape) {
+        mctx.setMiddlewareLog('prompt-censor-bypass', { skipped: true, reason: 'both features disabled' })
         return next()
       }
 
       // 处理 prompt
       if (mctx.prompt) {
-        const originalPrompt = mctx.prompt
-        const encodedPrompt = encodePrompt(originalPrompt, config)
+        let processedPrompt = mctx.prompt
+        const logInfo: Record<string, any> = {}
 
-        if (originalPrompt !== encodedPrompt) {
-          mctx.setMiddlewareLog('prompt-encoding', {
-            enabled: true,
-            encodeRange: config.encodeRange,
-            escapeFormat: config.escapeFormat,
-            originalLength: originalPrompt.length,
-            encodedLength: encodedPrompt.length
-          })
-          mctx.prompt = encodedPrompt
+        // 1. 先注入前置提示词（在编码之前）
+        if (config.enablePrefixPrompt && config.prefixPrompt) {
+          processedPrompt = config.prefixPrompt + processedPrompt
+          logInfo.prefixInjected = true
+          logInfo.prefixLength = config.prefixPrompt.length
+        }
+
+        // 2. 再进行 Unicode 编码（如果启用）
+        if (config.enableUnicodeEscape) {
+          const beforeEncoding = processedPrompt
+          processedPrompt = encodePrompt(processedPrompt, config)
+          if (beforeEncoding !== processedPrompt) {
+            logInfo.encoded = true
+            logInfo.encodeRange = config.encodeRange
+            logInfo.escapeFormat = config.escapeFormat
+            logInfo.originalLength = beforeEncoding.length
+            logInfo.encodedLength = processedPrompt.length
+          }
+        }
+
+        if (Object.keys(logInfo).length > 0) {
+          mctx.setMiddlewareLog('prompt-censor-bypass', logInfo)
+          mctx.prompt = processedPrompt
         }
       }
 

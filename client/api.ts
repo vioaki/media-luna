@@ -1,4 +1,4 @@
-import { send } from '@koishijs/client'
+import { send, socket } from '@koishijs/client'
 import type {
   ChannelConfig,
   PresetData,
@@ -36,10 +36,68 @@ export type {
   CurrentUser
 }
 
+// 支持自定义超时的 send 函数
+// @koishijs/client 的 send 默认超时 60 秒，对于生成任务不够用
+const responseHooks: Record<string, [(value: any) => void, (reason: any) => void]> = {}
+
+// 监听响应消息
+let listenerInitialized = false
+function initResponseListener() {
+  if (listenerInitialized || !socket.value) return
+  listenerInitialized = true
+  socket.value.addEventListener('message', (ev) => {
+    try {
+      const data = JSON.parse(ev.data)
+      if (data.type === 'response' && data.body) {
+        const { id, value, error } = data.body
+        if (responseHooks[id]) {
+          const [resolve, reject] = responseHooks[id]
+          delete responseHooks[id]
+          if (error) {
+            reject(error)
+          } else {
+            resolve(value)
+          }
+        }
+      }
+    } catch {
+      // ignore parse errors
+    }
+  })
+}
+
+function sendWithTimeout(type: string, args: any[], timeoutMs: number): Promise<any> {
+  if (!socket.value) return Promise.reject(new Error('WebSocket not connected'))
+  initResponseListener()
+
+  const id = Math.random().toString(36).slice(2, 9)
+  socket.value.send(JSON.stringify({ id, type, args: [args] }))
+
+  return new Promise((resolve, reject) => {
+    responseHooks[id] = [resolve, reject]
+    setTimeout(() => {
+      if (responseHooks[id]) {
+        delete responseHooks[id]
+        reject(new Error('timeout'))
+      }
+    }, timeoutMs)
+  })
+}
+
 // 通用调用封装
 async function call<T>(event: keyof any, params?: any): Promise<T> {
   // @ts-ignore
   const result = await send(event, params) as ApiResponse<T>
+  if (!result.success) {
+    throw new Error(result.error || '请求失败')
+  }
+  // @ts-ignore
+  return result.data
+}
+
+// 支持自定义超时的调用封装
+async function callWithTimeout<T>(event: string, params: any, timeoutMs: number): Promise<T> {
+  const result = await sendWithTimeout(event, params, timeoutMs) as ApiResponse<T>
   if (!result.success) {
     throw new Error(result.error || '请求失败')
   }
@@ -134,9 +192,12 @@ export const connectorApi = {
 }
 
 // 生成 API
+// 生成任务使用 10 分钟超时（600000ms），因为某些连接器（如 chat-api）可能需要较长时间
+const GENERATE_TIMEOUT = 10 * 60 * 1000
+
 export const generateApi = {
   generate: (params: { channelId: number, prompt: string, files?: ClientFileData[], parameters?: any, userId?: number }) =>
-    call<GenerationResult>('media-luna/generate', params),
+    callWithTimeout<GenerationResult>('media-luna/generate', params, GENERATE_TIMEOUT),
   preview: (params: { channelId: number, prompt: string, parameters?: any }) =>
     call<{ channelName: string, connectorId: string, finalPrompt: string, parameters: any }>('media-luna/generate/preview', params)
 }

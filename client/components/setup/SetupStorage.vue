@@ -61,7 +61,7 @@
       class="upload-verify-dialog"
     >
       <div class="upload-verify-content">
-        <p class="verify-desc">请上传一张测试图片，验证存储配置是否正确。上传成功后图片将显示在下方。</p>
+        <p class="verify-desc">请上传一张测试图片，系统将自动验证图片能否正常显示。</p>
 
         <!-- 上传区域 -->
         <div
@@ -80,10 +80,24 @@
             @change="handleFileSelect"
           />
           <template v-if="uploadedImageUrl">
-            <img :src="uploadedImageUrl" class="preview-image" alt="预览" />
-            <div class="image-overlay">
+            <img
+              :src="uploadedImageUrl"
+              class="preview-image"
+              alt="预览"
+              @load="imageLoadSuccess = true"
+              @error="handleImageError"
+            />
+            <div v-if="imageLoadSuccess" class="image-overlay success">
               <k-icon name="check-circle" class="success-icon" />
-              <span>上传成功，图片可正常显示</span>
+              <span>图片加载成功，配置正确</span>
+            </div>
+            <div v-else-if="imageLoadError" class="image-overlay error">
+              <k-icon name="times-circle" class="error-icon" />
+              <span>图片加载失败，请检查存储访问地址配置</span>
+            </div>
+            <div v-else class="image-overlay loading">
+              <k-icon name="sync" class="spin" />
+              <span>验证图片显示中...</span>
             </div>
           </template>
           <template v-else-if="uploading">
@@ -108,10 +122,10 @@
           <k-button @click="showUploadDialog = false">取消</k-button>
           <k-button
             type="primary"
-            :disabled="!uploadedImageUrl"
+            :disabled="!imageLoadSuccess"
             @click="confirmAndProceed"
           >
-            确认并继续
+            继续
           </k-button>
         </div>
       </template>
@@ -151,11 +165,27 @@ const uploadedImageUrl = ref('')
 const uploadError = ref('')
 const isDragging = ref(false)
 const fileInputRef = ref<HTMLInputElement | null>(null)
+const imageLoadSuccess = ref(false)
+const imageLoadError = ref(false)
+
+// 处理图片加载失败
+const handleImageError = () => {
+  imageLoadError.value = true
+  uploadError.value = '图片无法显示，请检查存储访问地址配置是否正确'
+}
 
 // 同步 localConfig 到父组件
 watch(localConfig, (newVal) => {
   emit('update:modelValue', { ...newVal })
 }, { deep: true })
+
+// 当切换到本地存储时，自动填充外部访问地址
+watch(() => localConfig.value.backend, (backend) => {
+  if (backend === 'local' && !localConfig.value.publicBaseUrl) {
+    const publicPath = localConfig.value.publicPath || '/media-luna/cache'
+    localConfig.value.publicBaseUrl = window.location.origin + publicPath
+  }
+})
 
 // 加载配置字段和当前值
 const loadConfig = async () => {
@@ -178,6 +208,13 @@ const loadConfig = async () => {
         newConfig[field.key] = field.default
       }
     }
+
+    // 自动填充本地存储的外部访问地址（使用当前浏览器访问地址）
+    if (newConfig.backend === 'local' && !newConfig.publicBaseUrl) {
+      const publicPath = newConfig.publicPath || '/media-luna/cache'
+      newConfig.publicBaseUrl = window.location.origin + publicPath
+    }
+
     localConfig.value = newConfig
   } catch (e) {
     console.error('Failed to load storage config:', e)
@@ -206,6 +243,8 @@ const handleNextClick = async () => {
   showUploadDialog.value = true
   uploadedImageUrl.value = ''
   uploadError.value = ''
+  imageLoadSuccess.value = false
+  imageLoadError.value = false
 }
 
 // 触发文件选择
@@ -241,6 +280,8 @@ const uploadFile = async (file: File) => {
   uploading.value = true
   uploadError.value = ''
   uploadedImageUrl.value = ''
+  imageLoadSuccess.value = false
+  imageLoadError.value = false
 
   try {
     // 读取文件为 base64
@@ -482,8 +523,24 @@ onMounted(loadConfig)
   font-size: 0.9rem;
 }
 
+.image-overlay.success {
+  background: linear-gradient(transparent, rgba(0, 128, 0, 0.7));
+}
+
+.image-overlay.error {
+  background: linear-gradient(transparent, rgba(180, 0, 0, 0.8));
+}
+
+.image-overlay.loading {
+  background: linear-gradient(transparent, rgba(0, 0, 0, 0.6));
+}
+
 .success-icon {
   color: var(--k-color-success);
+}
+
+.error-icon {
+  color: #ff6b6b;
 }
 
 .upload-error {

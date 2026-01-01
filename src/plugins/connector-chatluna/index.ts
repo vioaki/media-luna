@@ -32,13 +32,14 @@ export default definePlugin({
     const koishiCtx = ctx.ctx
     const logger = ctx.logger
 
+    // 先注册 API（用于前端获取模型列表）
+    // API 在调用时动态获取服务，不需要等待服务可用
+    registerChatLunaApi(koishiCtx, logger)
+
     // 使用 inject 安全访问 chatluna 和 mediaLuna 服务
     // 这样 Koishi 不会警告访问未注册的属性
     koishiCtx.inject(['chatluna', 'mediaLuna'], (injectedCtx) => {
       logger.info('ChatLuna service detected via inject')
-
-      // 注册 API（用于前端获取模型列表）
-      registerChatLunaApi(injectedCtx, logger)
 
       // 工具注册函数
       const registerTools = () => {

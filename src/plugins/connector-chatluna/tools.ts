@@ -82,7 +82,7 @@ function buildSchema(toolConfig: ToolConfig) {
   // 渠道参数（如果没有内置值，则暴露给 AI）
   if (!toolConfig.builtinChannel) {
     schemaFields.channel = z.string().describe(
-      'The Media Luna channel name to use for generation. Use list_presets tool to see available channels.'
+      'The Media Luna channel name to use for generation.'
     )
   }
 
@@ -107,14 +107,18 @@ function buildSchema(toolConfig: ToolConfig) {
 }
 
 /**
- * 生成工具描述（包含内置值信息）
+ * 生成工具描述（包含内置值信息和可用渠道/预设列表）
  */
 function buildDescription(toolConfig: ToolConfig): string {
   let desc = toolConfig.description
 
   if (toolConfig.builtinChannel) {
     desc += ` [Uses channel: ${toolConfig.builtinChannel}]`
+  } else {
+    // 添加渠道变量占位符，稍后替换
+    desc += ` Available channels: {channels}.`
   }
+
   if (toolConfig.builtinPreset) {
     desc += ` [Uses preset: ${toolConfig.builtinPreset}]`
   }
@@ -123,25 +127,46 @@ function buildDescription(toolConfig: ToolConfig): string {
 }
 
 /**
- * 替换描述中的 {presets} 变量
+ * 替换描述中的 {presets} 和 {channels} 变量
  */
-async function replacePresetsVariable(ctx: Context, description: string): Promise<string> {
-  if (!description.includes('{presets}')) {
-    return description
-  }
+async function replaceDescriptionVariables(ctx: Context, description: string): Promise<string> {
+  let result = description
 
-  try {
-    const mediaLuna = (ctx as any).mediaLuna
-    if (!mediaLuna?.presets) {
-      return description.replace('{presets}', 'none')
+  // 替换 {channels}
+  if (result.includes('{channels}')) {
+    try {
+      const mediaLuna = (ctx as any).mediaLuna
+      if (mediaLuna?.channelService) {
+        const channels = await mediaLuna.channelService.list()
+        const enabledChannels = channels
+          .filter((c: any) => c.enabled)
+          .map((c: any) => c.name)
+        result = result.replace('{channels}', enabledChannels.join(', ') || 'none')
+      } else {
+        result = result.replace('{channels}', 'none')
+      }
+    } catch {
+      result = result.replace('{channels}', 'none')
     }
-
-    const presets = await mediaLuna.presets.list({ enabledOnly: true })
-    const presetNames = presets.map((p: any) => p.name).join(', ')
-    return description.replace('{presets}', presetNames || 'none')
-  } catch {
-    return description.replace('{presets}', 'none')
   }
+
+  // 替换 {presets}
+  if (result.includes('{presets}')) {
+    try {
+      const mediaLuna = (ctx as any).mediaLuna
+      if (mediaLuna?.presets) {
+        const presets = await mediaLuna.presets.list({ enabledOnly: true })
+        const presetNames = presets.map((p: any) => p.name).join(', ')
+        result = result.replace('{presets}', presetNames || 'none')
+      } else {
+        result = result.replace('{presets}', 'none')
+      }
+    } catch {
+      result = result.replace('{presets}', 'none')
+    }
+  }
+
+  return result
 }
 
 /**
@@ -170,7 +195,7 @@ class MediaLunaGenerateTool extends StructuredTool {
   }
 
   private async updateDescription() {
-    this.description = await replacePresetsVariable(this.ctx, this.descriptionTemplate)
+    this.description = await replaceDescriptionVariables(this.ctx, this.descriptionTemplate)
   }
 
   async _call(
@@ -378,7 +403,7 @@ class MediaLunaPresetTool extends StructuredTool {
    * 更新描述，替换 {presets} 变量
    */
   private async updateDescription() {
-    this.description = await replacePresetsVariable(this.ctx, this.descriptionTemplate)
+    this.description = await replaceDescriptionVariables(this.ctx, this.descriptionTemplate)
   }
 
   async _call(

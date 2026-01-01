@@ -416,7 +416,7 @@ const openCreateDialog = () => {
     name: '',
     promptTemplate: '',
     referenceImages: [],
-    tags: [],
+    tags: ['text2img', 'img2img'],
     parameterOverrides: {},
     enabled: true,
     source: 'user'

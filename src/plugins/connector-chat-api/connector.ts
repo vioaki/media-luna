@@ -5,195 +5,88 @@ import { Context } from 'koishi'
 import type { ConnectorDefinition, FileData, OutputAsset, ConnectorRequestLog } from '../../core'
 import { connectorFields, connectorCardFields } from './config'
 
-/**
- * 检查是否为有效 URL
- * 除了格式校验，还检查 URL 是否包含非法字符（如 JSON 残留）
- */
-function isValidUrl(url: string): boolean {
-  // 检查是否包含 JSON 残留字符
-  if (/[{}\[\]"]/.test(url)) {
-    return false
-  }
+/** 媒体扩展名映射 */
+const MEDIA_EXTENSIONS: Record<string, 'image' | 'video' | 'audio'> = {
+  // 图片
+  '.jpg': 'image', '.jpeg': 'image', '.png': 'image', '.gif': 'image',
+  '.webp': 'image', '.svg': 'image', '.bmp': 'image', '.ico': 'image',
+  // 视频
+  '.mp4': 'video', '.webm': 'video', '.avi': 'video', '.mov': 'video', '.mkv': 'video',
+  // 音频
+  '.mp3': 'audio', '.wav': 'audio', '.ogg': 'audio', '.flac': 'audio', '.m4a': 'audio'
+}
 
-  try {
-    const parsed = new URL(url)
-    // 确保有有效的 host
-    if (!parsed.host) return false
-    // 确保 pathname 不包含异常字符
-    if (/[{}\[\]"]/.test(parsed.pathname)) return false
-    return true
-  } catch {
-    return false
-  }
+/** 已知的媒体托管域名 */
+const MEDIA_HOSTS: Record<string, 'image' | 'video'> = {
+  'videos.openai.com': 'video',
+  'oaidalleapiprodscus.blob.core.windows.net': 'image',
+  'replicate.delivery': 'image',
+  'i.imgur.com': 'image',
+  'cdn.discordapp.com': 'image',
+  'storage.googleapis.com': 'image'
 }
 
 /**
- * 检查 URL 是否可能是多媒体资源
+ * 判断媒体类型
  */
-function isMediaUrl(url: string): boolean {
-  const mediaExtensions = [
-    // 图片
-    '.jpg', '.jpeg', '.png', '.gif', '.webp', '.svg', '.bmp', '.ico',
-    // 视频
-    '.mp4', '.webm', '.avi', '.mov', '.mkv',
-    // 音频
-    '.mp3', '.wav', '.ogg', '.flac', '.m4a'
-  ]
-
+function getMediaKind(url: string): 'image' | 'video' | 'audio' | null {
   const lowerUrl = url.toLowerCase()
 
-  // 检查扩展名
-  if (mediaExtensions.some(ext => lowerUrl.includes(ext))) {
-    return true
+  // 1. 检查已知域名
+  for (const [host, kind] of Object.entries(MEDIA_HOSTS)) {
+    if (lowerUrl.includes(host)) return kind
   }
 
-  // 检查常见的图片托管服务
-  const imageHosts = [
-    'videos.openai.com',
-    'imgur.com', 'i.imgur.com',
-    'cdn.discordapp.com',
-    'media.discordapp.net',
-    'pbs.twimg.com',
-    'oaidalleapiprodscus.blob.core.windows.net', // OpenAI DALL-E
-    'replicate.delivery', // Replicate
-    'storage.googleapis.com'
-  ]
-
-  if (imageHosts.some(host => lowerUrl.includes(host))) {
-    return true
+  // 2. 检查扩展名
+  for (const [ext, kind] of Object.entries(MEDIA_EXTENSIONS)) {
+    if (lowerUrl.includes(ext)) return kind
   }
 
-  return false
+  return null
 }
 
 /**
- * 根据 URL 判断媒体类型
- */
-function getMediaKind(url: string): 'image' | 'video' | 'audio' {
-  const lowerUrl = url.toLowerCase()
-
-  if (lowerUrl.includes('videos.openai.com')) {
-    return 'video'
-  }
-
-  const videoExtensions = ['.mp4', '.webm', '.avi', '.mov', '.mkv']
-  if (videoExtensions.some(ext => lowerUrl.includes(ext))) {
-    return 'video'
-  }
-
-  const audioExtensions = ['.mp3', '.wav', '.ogg', '.flac', '.m4a']
-  if (audioExtensions.some(ext => lowerUrl.includes(ext))) {
-    return 'audio'
-  }
-
-  return 'image'
-}
-
-/**
- * 从回复内容中提取多媒体资源
- * 使用 Set 确保 URL 不重复
+ * 从回复内容中提取多媒体 URL
+ * 简化版：只提取 URL，自动判断类型
  */
 function extractMediaFromContent(content: string, mode: string): OutputAsset[] {
+  if (mode === 'text') {
+    return [{ kind: 'text', content }]
+  }
+
   const assets: OutputAsset[] = []
   const seenUrls = new Set<string>()
 
-  /** 添加资源（自动去重） */
-  const addAsset = (asset: OutputAsset): boolean => {
-    const key = asset.url || asset.content || ''
-    if (seenUrls.has(key)) return false
-    seenUrls.add(key)
-    assets.push(asset)
-    return true
-  }
+  // 统一的 URL 正则：匹配 http/https URL
+  const urlRegex = /https?:\/\/[^\s"'<>\[\]{}()]+/g
+  let match
 
-  if (mode === 'text') {
-    // 纯文本模式，直接返回文本
-    return [{
-      kind: 'text',
-      content: content
-    }]
-  }
+  while ((match = urlRegex.exec(content)) !== null) {
+    let url = match[0]
+    // 清理末尾标点和 markdown 残留
+    url = url.replace(/[.,;:!?)]+$/, '')
 
-  if (mode === 'auto' || mode === 'markdown') {
-    // 提取 Markdown 图片: ![alt](url)
-    const markdownImageRegex = /!\[([^\]]*)\]\(([^)]+)\)/g
-    let match
-    while ((match = markdownImageRegex.exec(content)) !== null) {
-      const url = match[2]
-      if (isValidUrl(url)) {
-        addAsset({
-          kind: 'image',
-          url: url,
-          meta: { alt: match[1] }
-        })
-      }
-    }
+    if (seenUrls.has(url)) continue
 
-    // 提取 HTML 视频/图片标签 (包括在代码块中的)
-    const htmlVideoRegex = /<video[^>]+src=(['"])(.*?)\1/gi
-    while ((match = htmlVideoRegex.exec(content)) !== null) {
-      const url = match[2]
-      if (isValidUrl(url)) {
-        addAsset({
-          kind: 'video',
-          url: url
-        })
-      }
-    }
-
-    const htmlImageRegex = /<img[^>]+src=(['"])(.*?)\1/gi
-    while ((match = htmlImageRegex.exec(content)) !== null) {
-      const url = match[2]
-      if (isValidUrl(url)) {
-        addAsset({
-          kind: 'image',
-          url: url
-        })
-      }
+    const kind = getMediaKind(url)
+    if (kind) {
+      seenUrls.add(url)
+      assets.push({ kind, url })
     }
   }
 
-  if (mode === 'auto' || mode === 'url') {
-    // 提取独立的 URL（排除已提取的）
-    // 注意：排除 ) 以避免匹配 Markdown 语法中的 URL
-    // 排除 } ] " ' 以避免匹配 JSON 结构中的 URL
-    const urlRegex = /https?:\/\/[^\s<>"{}|\\^`[\]')]+/g
-    let match
-    while ((match = urlRegex.exec(content)) !== null) {
-      let url = match[0]
-      // 清理 URL 末尾可能的标点符号
-      url = url.replace(/[.,;:!?]+$/, '')
-      if (!seenUrls.has(url) && isMediaUrl(url)) {
-        const kind = getMediaKind(url)
-        addAsset({
-          kind,
-          url: url
-        })
-      }
-    }
-  }
-
+  // base64 图片
   if (mode === 'auto' || mode === 'base64') {
-    // 提取 base64 图片: data:image/xxx;base64,xxx
-    const base64Regex = /data:(image\/[^;]+);base64,([A-Za-z0-9+/=]+)/g
-    let match
+    const base64Regex = /data:(image\/[^;]+);base64,[A-Za-z0-9+/=]+/g
     while ((match = base64Regex.exec(content)) !== null) {
-      addAsset({
-        kind: 'image',
-        url: match[0],
-        mime: match[1]
-      })
+      if (!seenUrls.has(match[0])) {
+        seenUrls.add(match[0])
+        assets.push({ kind: 'image', url: match[0], mime: match[1] })
+      }
     }
   }
 
-  // 如果没有提取到任何多媒体，返回文本内容
-  if (assets.length === 0) {
-    return [{
-      kind: 'text',
-      content: content
-    }]
-  }
-
+  // 没有提取到媒体时返回空（不返回无关的文字回复）
   return assets
 }
 
@@ -261,8 +154,6 @@ async function generate(
 
   // 构建完整 API Endpoint
   const baseUrl = apiUrl.replace(/\/$/, '')
-  // 如果用户填写了完整路径（以 /chat/completions 结尾），则直接使用
-  // 否则自动拼接 /chat/completions
   const endpoint = baseUrl.endsWith('/chat/completions')
     ? baseUrl
     : `${baseUrl}/chat/completions`
@@ -311,7 +202,7 @@ async function generate(
       }
     }
 
-    // 如果没有解析出 SSE 内容（可能是服务端不支持流式或返回了错误 JSON），尝试直接解析
+    // 如果没有解析出 SSE 内容，尝试直接解析
     if (!isSSE && !content) {
       try {
         const json = JSON.parse(response as string)

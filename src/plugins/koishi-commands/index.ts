@@ -42,15 +42,14 @@ export default definePlugin({
     // 保存 mediaLuna 引用
     let mediaLunaRef: any = null
 
+    // 父指令名称（固定）
+    const PARENT_COMMAND = 'medialuna'
+
     // 获取系统保留指令名（不允许渠道使用这些名称）
     const getReservedCommandNames = (): Set<string> => {
       const reserved = new Set<string>()
       // 本插件注册的指令
-      reserved.add(config.presetsCommand.toLowerCase())
-      reserved.add(config.presetCommand.toLowerCase())
-      reserved.add(config.modelsCommand.toLowerCase())
-      reserved.add(config.myTasksCommand.toLowerCase())
-      reserved.add(config.taskDetailCommand.toLowerCase())
+      reserved.add(PARENT_COMMAND.toLowerCase())
       // Koishi 内置指令
       reserved.add('help')
       reserved.add('status')
@@ -112,7 +111,7 @@ export default definePlugin({
         }
 
         // 注册渠道指令
-        const dispose = registerChannelCommand(ctx, mediaLunaRef, channel, presets, config, logger)
+        const dispose = registerChannelCommand(ctx, mediaLunaRef, channel, presets, config, logger, PARENT_COMMAND)
         channelCommandDisposables.set(channel.id, { dispose, commandName })
         registeredInThisRound.add(commandNameLower)
       }
@@ -122,8 +121,45 @@ export default definePlugin({
 
     // 注册预设指令的函数
     const registerPresetCommands = () => {
-      // /presets [tag] - 查看预设列表
-      const presetsCmd = ctx.command(`${config.presetsCommand} [tag:string]`, '查看可用预设')
+      // 注册父指令，带帮助信息
+      const parentCmd = ctx.command(PARENT_COMMAND, 'Media Luna 多媒体生成')
+        .action(() => {
+          const lines: string[] = []
+          lines.push('━━━━━━━━━━━━━━━━━━━━')
+          lines.push('🎨 Media Luna 多媒体生成')
+          lines.push('━━━━━━━━━━━━━━━━━━━━')
+          lines.push('')
+          lines.push('📋 查询指令：')
+          lines.push('  models - 查看所有模型名')
+          lines.push('  presets - 查看所有预设名')
+          lines.push('  preset <预设名> - 查看具体预设内容')
+          lines.push('  mytasks - 查看我的生成记录')
+          lines.push('  taskinfo <ID> - 查看任务详情')
+          lines.push('')
+          lines.push('🖼️ 基础用法：')
+          lines.push('  1. 渠道名 预设名 提示词 [图片]')
+          lines.push('     - 图片≥2张: 直接触发生成')
+          lines.push('     - 图片≤1张: 进入收集模式，发送"开始"触发')
+          lines.push('  2. 渠道名 提示词 [图片]')
+          lines.push('     - 不指定预设也可触发')
+          lines.push('  3. 引用消息发指令')
+          lines.push('     - 被引用消息和引用消息视为一条')
+          lines.push('')
+          lines.push('⚡ 高级用法：')
+          lines.push('  • @用户 会自动获取该用户头像')
+          lines.push('  • 使用 #lora名# 指定 LoRA (部分模型)')
+          lines.push('  • 提示词包含"润色"自动优化 (部分模型)')
+          lines.push('  • 支持 1024x1024/9:16/横屏 指定尺寸')
+          lines.push('')
+          lines.push('━━━━━━━━━━━━━━━━━━━━')
+
+          return `<message forward><message>${lines.join('\n')}</message></message>`
+        })
+      presetCommandDisposables.push(() => parentCmd.dispose())
+
+      // medialuna.presets [tag] - 查看预设列表
+      const presetsCmd = ctx.command(`${PARENT_COMMAND}.presets [tag:string]`, '查看可用预设')
+        .alias('presets')
         .action(async (_: any, tag: string) => {
           const presetService = mediaLunaRef?.presets
           if (!presetService) {
@@ -173,11 +209,11 @@ export default definePlugin({
 
           return content
         })
-
       presetCommandDisposables.push(() => presetsCmd.dispose())
 
-      // /preset <name> - 查看预设详情
-      const presetCmd = ctx.command(`${config.presetCommand} <name:string>`, '查看预设详情')
+      // medialuna.preset <name> - 查看预设详情
+      const presetCmd = ctx.command(`${PARENT_COMMAND}.preset <name:string>`, '查看预设详情')
+        .alias('preset')
         .action(async ({ session }: { session?: Session }, name: string) => {
           if (!name) {
             return '请指定预设名称'
@@ -252,11 +288,11 @@ export default definePlugin({
             return messages.join('\n')
           }
         })
-
       presetCommandDisposables.push(() => presetCmd.dispose())
 
-      // /models - 查看可用模型
-      const modelsCmd = ctx.command(`${config.modelsCommand}`, '查看可用模型')
+      // medialuna.models - 查看可用模型
+      const modelsCmd = ctx.command(`${PARENT_COMMAND}.models`, '查看可用模型')
+        .alias('models')
         .action(async () => {
           const channels = await mediaLunaRef.channels.listEnabled()
 
@@ -294,11 +330,11 @@ export default definePlugin({
 
           return `<message forward><message>${content}</message></message>`
         })
-
       presetCommandDisposables.push(() => modelsCmd.dispose())
 
-      // /mytasks [count] - 查看我的画图记录
-      const myTasksCmd = ctx.command(`${config.myTasksCommand} [count:number]`, '查看我的画图记录')
+      // medialuna.mytasks [count] - 查看我的画图记录
+      const myTasksCmd = ctx.command(`${PARENT_COMMAND}.mytasks [count:number]`, '查看我的画图记录')
+        .alias('mytasks')
         .action(async ({ session }: { session?: Session }, count?: number) => {
           if (!session) {
             return '会话不可用'
@@ -370,15 +406,15 @@ export default definePlugin({
           }
 
           // 添加提示
-          forwardMessages.push(`<message>使用 ${config.taskDetailCommand} <任务ID> 查看详细信息</message>`)
+          forwardMessages.push(`<message>使用 ${PARENT_COMMAND}.taskinfo <任务ID> 查看详细信息</message>`)
 
           return `<message forward>${forwardMessages.join('')}</message>`
         })
-
       presetCommandDisposables.push(() => myTasksCmd.dispose())
 
-      // /taskinfo <id> - 查看任务详情
-      const taskDetailCmd = ctx.command(`${config.taskDetailCommand} <id:number>`, '查看任务详细信息')
+      // medialuna.taskinfo <id> - 查看任务详情
+      const taskDetailCmd = ctx.command(`${PARENT_COMMAND}.taskinfo <id:number>`, '查看任务详细信息')
+        .alias('taskinfo')
         .action(async ({ session }: { session?: Session }, id: number) => {
           if (!id && id !== 0) {
             return '请指定任务 ID'
@@ -521,7 +557,6 @@ export default definePlugin({
 
           return `<message forward>${forwardMessages.join('')}</message>`
         })
-
       presetCommandDisposables.push(() => taskDetailCmd.dispose())
 
       logger.info('Preset query commands registered')
@@ -581,7 +616,8 @@ function registerChannelCommand(
   channel: any,
   presets: any[],
   config: KoishiCommandsConfig,
-  logger: any
+  logger: any,
+  parentCommand: string
 ): () => void {
   // 检查渠道是否需要收集模式
   // 只有带 img2img 或 img2video 标签的渠道才需要收集图片输入
@@ -596,7 +632,9 @@ function registerChannelCommand(
   // 重要：Koishi 的 ctx.command() 在命令已存在时会返回现有命令对象
   // 此时再调用 .option() 会导致 duplicate option 错误
   // 因此需要检查命令是否已存在，或者选项是否已注册
-  const channelCmd = ctx.command(`${channel.name} [...rest:string]`, `${channel.name} 生成`)
+  const commandName = `${parentCommand}.${channel.name}`
+  const channelCmd = ctx.command(`${commandName} [...rest:string]`, `${channel.name} 生成`)
+    .alias(channel.name)  // 添加短名别名，允许直接使用渠道名调用
 
   // 安全添加选项：检查选项是否已存在，避免重复注册
   // Koishi Command 对象的 _options 存储了已注册的选项
@@ -607,7 +645,7 @@ function registerChannelCommand(
 
   // 设置用法说明和动作处理器
   channelCmd
-    .usage(`用法: ${channel.name} [预设名] <提示词>\n可用预设: ${presets.map((p: any) => p.name).join(', ') || '无'}`)
+    .usage(`用法: ${commandName} [预设名] <提示词>\n可用预设: ${presets.map((p: any) => p.name).join(', ') || '无'}`)
     .action(async ({ session, options }: { session: Session; options: any }) => {
       // 初始化收集状态（预设名稍后解析）
       const state: CollectState = {

@@ -791,21 +791,8 @@ const generate = async () => {
       }
     }
   } catch (e: any) {
-    // 请求异常，尝试通过 taskId 恢复
-    if (currentTaskId.value) {
-      await new Promise(resolve => setTimeout(resolve, 500))
-      const taskResult = await fetchTaskResult(currentTaskId.value)
-      if (taskResult) {
-        result.value = taskResult
-        if (taskResult.success) {
-          historyGalleryRef.value?.refresh()
-        }
-      } else {
-        result.value = { success: false, error: e.message || '请求失败' }
-      }
-    } else {
-      result.value = { success: false, error: e.message || '请求失败' }
-    }
+    // 请求异常（现已使用 10 分钟超时，基本不会触发）
+    result.value = { success: false, error: e.message || '请求失败' }
   } finally {
     stopTimer()
     generating.value = false

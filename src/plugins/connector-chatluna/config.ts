@@ -71,13 +71,6 @@ export const connectorFields: ConfigField[] = [
     dependsOn: 'platform',
     placeholder: '选择模型',
     description: '选择 ChatLuna 模型（格式: 适配器/模型名）'
-  },
-  {
-    key: 'timeout',
-    label: '超时时间（秒）',
-    type: 'number',
-    default: 300,
-    description: 'API 调用超时时间'
   }
 ]
 
@@ -211,9 +204,19 @@ export const chatlunaConfigFields: ConfigField[] = [
 
 // ============ 默认配置 ============
 
+/** 默认画图工具 */
+export const defaultToolConfig: ToolConfig = {
+  name: 'draw',
+  description: 'Generate images based on text prompts. Supports various styles and presets.',
+  enabled: true,
+  returnMode: 'async',
+  asyncSendStartMessage: true,
+  asyncStartMessage: '图片生成中，请稍候...'
+}
+
 export const defaultConfig: ChatLunaPluginConfig = {
   enableTools: false,
-  tools: [],
+  tools: [defaultToolConfig],
   presetTool: {
     enabled: true,
     name: 'list_presets',

@@ -81,7 +81,7 @@ async function generate(
   const elementStr = String(rendered.element)
   const imageUrls: string[] = []
 
-  // 提取 <img src="..."/> 或 <image url="..."/>
+  // 提取 <img src="..."/> 格式
   const imgSrcMatches = elementStr.match(/<img[^>]+src=["']([^"']+)["']/gi)
   if (imgSrcMatches) {
     for (const match of imgSrcMatches) {
@@ -92,12 +92,34 @@ async function generate(
     }
   }
 
+  // 提取 <image url="..."/> 格式 (Koishi 消息元素)
   const imageUrlMatches = elementStr.match(/<image[^>]+url=["']([^"']+)["']/gi)
   if (imageUrlMatches) {
     for (const match of imageUrlMatches) {
       const urlMatch = match.match(/url=["']([^"']+)["']/)
       if (urlMatch?.[1]) {
         imageUrls.push(urlMatch[1])
+      }
+    }
+  }
+
+  // 提取 markdown 图片格式 ![...](url)
+  const mdImageMatches = elementStr.match(/!\[[^\]]*\]\(([^)]+)\)/g)
+  if (mdImageMatches) {
+    for (const match of mdImageMatches) {
+      const urlMatch = match.match(/!\[[^\]]*\]\(([^)]+)\)/)
+      if (urlMatch?.[1]) {
+        imageUrls.push(urlMatch[1])
+      }
+    }
+  }
+
+  // 提取独立的图片 URL（http/https 开头，常见图片扩展名结尾）
+  const urlMatches = elementStr.match(/https?:\/\/[^\s"'<>]+\.(?:png|jpg|jpeg|gif|webp|bmp)(?:\?[^\s"'<>]*)?/gi)
+  if (urlMatches) {
+    for (const url of urlMatches) {
+      if (!imageUrls.includes(url)) {
+        imageUrls.push(url)
       }
     }
   }

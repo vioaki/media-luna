@@ -11,6 +11,7 @@ const ModelType = {
 
 /**
  * 注册 ChatLuna 相关 API
+ * 注意：API 在插件加载时注册，在调用时动态获取服务
  */
 export function registerChatLunaApi(ctx: Context, logger: any) {
   const koishiConsole = (ctx as any).console
@@ -19,14 +20,12 @@ export function registerChatLunaApi(ctx: Context, logger: any) {
     return
   }
 
-  const chatluna = (ctx as any).chatluna
-  const mediaLuna = (ctx as any).mediaLuna
-
   // ============ ChatLuna 模型 API ============
 
   // 获取所有平台（适配器）列表
   koishiConsole.addListener('media-luna/chatluna/platforms', async () => {
     try {
+      const chatluna = (ctx as any).chatluna
       if (!chatluna) {
         return { success: false, error: 'ChatLuna service not available' }
       }
@@ -55,6 +54,7 @@ export function registerChatLunaApi(ctx: Context, logger: any) {
   // 获取指定平台下的模型列表
   koishiConsole.addListener('media-luna/chatluna/models', async ({ platform }: { platform?: string }) => {
     try {
+      const chatluna = (ctx as any).chatluna
       if (!chatluna) {
         return { success: false, error: 'ChatLuna service not available' }
       }
@@ -82,6 +82,7 @@ export function registerChatLunaApi(ctx: Context, logger: any) {
   // 获取所有模型（平台/模型名格式）
   koishiConsole.addListener('media-luna/chatluna/all-models', async () => {
     try {
+      const chatluna = (ctx as any).chatluna
       if (!chatluna) {
         return { success: false, error: 'ChatLuna service not available' }
       }
@@ -106,6 +107,7 @@ export function registerChatLunaApi(ctx: Context, logger: any) {
   // 获取渠道选项列表
   koishiConsole.addListener('media-luna/chatluna/channel-options', async () => {
     try {
+      const mediaLuna = (ctx as any).mediaLuna
       if (!mediaLuna) {
         return { success: false, error: 'MediaLuna service not available' }
       }
@@ -133,6 +135,7 @@ export function registerChatLunaApi(ctx: Context, logger: any) {
   // 获取预设选项列表
   koishiConsole.addListener('media-luna/chatluna/preset-options', async () => {
     try {
+      const mediaLuna = (ctx as any).mediaLuna
       if (!mediaLuna) {
         return { success: false, error: 'MediaLuna service not available' }
       }
@@ -158,6 +161,7 @@ export function registerChatLunaApi(ctx: Context, logger: any) {
   // 获取所有预设（包含描述，用于预设查看工具）
   koishiConsole.addListener('media-luna/chatluna/preset-list', async () => {
     try {
+      const mediaLuna = (ctx as any).mediaLuna
       if (!mediaLuna) {
         return { success: false, error: 'MediaLuna service not available' }
       }

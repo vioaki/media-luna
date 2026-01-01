@@ -7,7 +7,7 @@ import cachePlugin from './cache'
 import presetPlugin from './preset'
 import billingPlugin from './billing'
 import taskPlugin from './task'
-import promptEncodingPlugin from './prompt-encoding'
+import censorBypassPlugin from './prompt-censor-bypass'
 import webuiAuthPlugin from './webui-auth'
 import koishiCommandsPlugin from './koishi-commands'
 import vitsPlugin from './vits'
@@ -39,7 +39,7 @@ export const builtinPlugins: PluginDefinition[] = [
   presetPlugin,
   billingPlugin,
   taskPlugin,
-  promptEncodingPlugin,
+  censorBypassPlugin,
   webuiAuthPlugin,
   koishiCommandsPlugin,
   vitsPlugin,
@@ -70,7 +70,7 @@ export {
   presetPlugin,
   billingPlugin,
   taskPlugin,
-  promptEncodingPlugin,
+  censorBypassPlugin,
   webuiAuthPlugin,
   koishiCommandsPlugin,
   vitsPlugin,
@@ -99,7 +99,7 @@ export type { StorageConfig, LocalCacheConfig } from './cache'
 export type { PresetPluginConfig, PresetMiddlewareConfig, RemoteSyncConfig } from './preset'
 export type { BillingConfig } from './billing'
 export type { TaskPluginConfig } from './task'
-export type { PromptEncodingConfig } from './prompt-encoding'
+export type { CensorBypassConfig } from './prompt-censor-bypass'
 export type { WebuiAuthConfig } from './webui-auth'
 export type { KoishiCommandsConfig } from './koishi-commands'
 export type { VitsPluginConfig, VitsSpeaker, VitsSayOptions } from './vits'
@@ -115,5 +115,5 @@ export { WebuiAuthService } from './webui-auth'
 export { MediaLunaVits, getChannelSpeakerIdBase, getSpeakerIdFromChannelId, getChannelIdFromSpeakerId } from './vits'
 
 // 导出中间件工厂
-export { createPromptEncodingMiddleware } from './prompt-encoding'
+export { createCensorBypassMiddleware } from './prompt-censor-bypass'
 export { createChatLunaPromptEnhanceMiddleware } from './connector-chatluna/middleware'
