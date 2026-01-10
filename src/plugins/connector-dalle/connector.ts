@@ -64,14 +64,26 @@ async function generate(
     throw new Error('Invalid response from DALL-E API')
   }
 
-  return response.data.map((item: any) => ({
-    kind: 'image' as const,
-    url: item.url || item.b64_json,
-    mime: 'image/png',
-    meta: {
-      revisedPrompt: item.revised_prompt
+  return response.data.map((item: any) => {
+    let url: string
+    if (item.url) {
+      url = item.url
+    } else if (item.b64_json) {
+      // b64_json 是原始 base64 字符串，需要加上 data URL 前缀
+      url = `data:image/png;base64,${item.b64_json}`
+    } else {
+      throw new Error('No image data in response')
     }
-  }))
+
+    return {
+      kind: 'image' as const,
+      url,
+      mime: 'image/png',
+      meta: {
+        revisedPrompt: item.revised_prompt
+      }
+    }
+  })
 }
 
 /** DALL-E 连接器定义 */

@@ -16,6 +16,8 @@ export interface KoishiCommandsConfig {
   linkModeEnabled: boolean
   /** 触发链接模式的渠道标签（逗号分隔，如 nsfw,r18） */
   linkModeTags: string
+  /** 是否输出文本内容 */
+  outputTextContent: boolean
 }
 
 /** 默认配置 */
@@ -25,7 +27,8 @@ export const defaultKoishiCommandsConfig: KoishiCommandsConfig = {
   collectTimeout: 120,
   directTriggerImageCount: 2,
   linkModeEnabled: false,
-  linkModeTags: 'nsfw'
+  linkModeTags: 'nsfw',
+  outputTextContent: false
 }
 
 /** 配置字段定义 */
@@ -71,5 +74,12 @@ export const koishiCommandsConfigFields: ConfigField[] = [
     type: 'text',
     default: 'nsfw',
     description: '触发链接模式的渠道标签，多个标签用逗号分隔（如 nsfw,r18）'
+  },
+  {
+    key: 'outputTextContent',
+    label: '输出文本内容',
+    type: 'boolean',
+    default: false,
+    description: '是否输出 API 返回的文本内容（如思考过程、模型回复等）'
   }
 ]

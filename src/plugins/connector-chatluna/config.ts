@@ -46,6 +46,8 @@ export interface ChatLunaPluginConfig {
   tools: ToolConfig[]
   /** 预设查看工具配置 */
   presetTool: PresetToolConfig
+  /** 是否启用变量注册 */
+  enableVariables: boolean
   /** 提示词润色配置 */
   promptEnhance: ChatLunaPromptEnhanceConfig
 }
@@ -89,6 +91,13 @@ export const chatlunaConfigFields: ConfigField[] = [
     type: 'boolean',
     default: false,
     description: '在 ChatLuna 中注册 Media Luna 工具（供 AI 调用画图）'
+  },
+  {
+    key: 'enableVariables',
+    label: '启用变量注册',
+    type: 'boolean',
+    default: false,
+    description: '注册预设变量，可在 ChatLuna 预设中使用 {{medialuna_channels()}}、{{medialuna_presets()}} 等'
   },
   {
     key: 'presetTool.enabled',
@@ -207,5 +216,6 @@ export const defaultConfig: ChatLunaPluginConfig = {
     name: 'list_presets',
     description: 'List available presets for image generation. Available presets: {presets}'
   },
+  enableVariables: false,
   promptEnhance: defaultPromptEnhanceConfig
 }

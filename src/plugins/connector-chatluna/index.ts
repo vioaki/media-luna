@@ -7,6 +7,7 @@ import type { PluginContext } from '../../core/types'
 import { ChatLunaConnector } from './connector'
 import { registerChatLunaApi } from './api'
 import { registerChatLunaTools, unregisterChatLunaTools } from './tools'
+import { registerChatLunaVariables, unregisterChatLunaVariables } from './variables'
 import { createChatLunaPromptEnhanceMiddleware } from './middleware'
 import { chatlunaConfigFields, defaultConfig, type ChatLunaPluginConfig } from './config'
 
@@ -51,14 +52,26 @@ export default definePlugin({
         }
       }
 
-      // 延迟注册工具（等待 ChatLuna 完全初始化）
+      // 变量注册函数
+      const registerVariables = () => {
+        const config = ctx.getConfig<ChatLunaPluginConfig>()
+
+        if (config.enableVariables) {
+          logger.info('Registering ChatLuna variables...')
+          registerChatLunaVariables(injectedCtx, config, logger)
+        }
+      }
+
+      // 延迟注册工具和变量（等待 ChatLuna 完全初始化）
       injectedCtx.setTimeout(() => {
         registerTools()
+        registerVariables()
       }, 2000)
 
       // 注册 dispose 回调
       ctx.onDispose(() => {
         unregisterChatLunaTools()
+        unregisterChatLunaVariables()
       })
     })
 

@@ -31,6 +31,7 @@ import edgeTTSConnectorPlugin from './connector-edge-tts'
 import openaiTTSConnectorPlugin from './connector-openai-tts'
 import azureTTSConnectorPlugin from './connector-azure-tts'
 import volcengineTTSConnectorPlugin from './connector-volcengine-tts'
+import peintureConnectorPlugin from './connector-peinture'
 import { modelscopePlugin } from './plugin-modelscope'
 
 /** 内置插件列表 - 只需在这里维护一次 */
@@ -63,6 +64,7 @@ export const builtinPlugins: PluginDefinition[] = [
   openaiTTSConnectorPlugin,
   azureTTSConnectorPlugin,
   volcengineTTSConnectorPlugin,
+  peintureConnectorPlugin,
   modelscopePlugin
 ]
 
@@ -94,6 +96,7 @@ export {
   openaiTTSConnectorPlugin,
   azureTTSConnectorPlugin,
   volcengineTTSConnectorPlugin,
+  peintureConnectorPlugin,
   modelscopePlugin
 }
 

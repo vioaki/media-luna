@@ -325,36 +325,88 @@ class MediaLunaGenerateTool extends StructuredTool {
     session: Session | undefined
   ): Promise<string> {
     // 用于在 prepare 完成时 resolve 的 Promise
-    let resolvePrepare: (info: { taskId?: number; hints: string[] }) => void
-    const preparePromise = new Promise<{ taskId?: number; hints: string[] }>(resolve => {
+    let resolvePrepare: (info: { hints: string[] }) => void
+    const preparePromise = new Promise<{ hints: string[] }>((resolve) => {
       resolvePrepare = resolve
     })
 
-    // 用于保存最终结果，以便后台发送
-    let generationPromise: Promise<any>
+    // 标记 prepare 回调是否已被调用
+    let prepareCallbackCalled = false
 
     // 启动生成（后台执行）
-    generationPromise = mediaLuna.generateByName({
+    const generationPromise = mediaLuna.generateByName({
       channelName,
       prompt,
       files,
       presetName,
       session,
       uid: (session?.user as any)?.id,
-      // prepare 阶段完成时调用
+      // prepare 阶段完成时调用（只有成功通过 prepare 阶段才会调用）
       onPrepareComplete: async (beforeHints: string[]) => {
-        // 获取任务ID需要从 store 中获取，但这里无法直接访问
-        // 任务ID会在返回结果中体现
+        prepareCallbackCalled = true
         resolvePrepare!({ hints: beforeHints })
       }
     })
 
-    // 等待 prepare 完成或超时（防止无限等待）
-    const prepareTimeout = new Promise<{ taskId?: number; hints: string[] }>(resolve => {
-      setTimeout(() => resolve({ hints: [] }), 10000) // 10秒超时
+    // 将 generationPromise 也转换为可以 race 的 Promise
+    // 如果生成快速完成（成功或失败），也要处理
+    const generationRacePromise = generationPromise.then((result: any) => {
+      // 如果 prepare 回调已调用，说明已经进入生成阶段，不需要处理
+      if (prepareCallbackCalled) {
+        return null // 返回 null 表示不需要在 race 中处理
+      }
+      // prepare 回调未被调用但生成已完成，说明 prepare 阶段就失败了
+      if (!result.success) {
+        return { type: 'failed' as const, error: result.error || '生成失败' }
+      }
+      // 罕见情况：没有 prepare 回调但生成成功了
+      return { type: 'success' as const, result }
     })
 
-    const prepareInfo = await Promise.race([preparePromise, prepareTimeout])
+    // 超时 Promise
+    const timeoutPromise = new Promise<{ type: 'timeout' }>((resolve) => {
+      setTimeout(() => resolve({ type: 'timeout' }), 10000)
+    })
+
+    // 将 preparePromise 也包装一下
+    const prepareRacePromise = preparePromise.then((info) => ({
+      type: 'prepared' as const,
+      hints: info.hints
+    }))
+
+    // 等待三者之一完成
+    const raceResult = await Promise.race([
+      prepareRacePromise,
+      generationRacePromise,
+      timeoutPromise
+    ])
+
+    // 处理结果
+    if (raceResult === null) {
+      // generationRacePromise 返回 null，说明 prepare 已完成，等待 preparePromise
+      // 这种情况理论上不会发生，因为 prepareRacePromise 会先 resolve
+      // 但为了安全，返回任务已启动
+    } else if (raceResult.type === 'failed') {
+      // prepare 阶段失败（如余额不足）
+      return `[TASK FAILED] ${raceResult.error}`
+    } else if (raceResult.type === 'timeout') {
+      // 超时
+      return `[TASK FAILED] 准备阶段超时`
+    } else if (raceResult.type === 'success') {
+      // 罕见：没有 prepare 回调但生成成功了
+      // 这种情况下不需要后台处理，直接返回结果
+      const result = raceResult.result
+      if (result.output?.length > 0) {
+        const urls = result.output
+          .filter((a: any) => a.url)
+          .map((a: any) => a.url)
+        return `Image generated successfully. URLs: ${urls.join(', ')}`
+      }
+      return 'Image generated but no output'
+    }
+
+    // type === 'prepared'，prepare 阶段成功完成
+    const prepareInfo = raceResult as { type: 'prepared'; hints: string[] }
 
     // 后台继续等待生成完成并发送结果
     this.handleAsyncResult(generationPromise, session)

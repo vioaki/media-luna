@@ -71,6 +71,12 @@ export interface StorageConfig {
   webdavPassword?: string
   webdavBasePath?: string
   webdavPublicBaseUrl?: string
+  // Immich 配置
+  immichEndpoint?: string
+  immichApiKey?: string
+  immichDeviceId?: string
+  immichAlbumId?: string
+  immichPublicBaseUrl?: string
 }
 
 /** 完整缓存插件配置 */

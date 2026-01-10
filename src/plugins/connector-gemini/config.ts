@@ -53,6 +53,17 @@ export const connectorFields: ConnectorField[] = [
     description: '生成图像的分辨率'
   },
   {
+    key: 'outputMimeType',
+    label: '输出格式',
+    type: 'select',
+    options: [
+      { label: '不设置（默认 JPEG）', value: '' },
+      { label: 'JPEG', value: 'image/jpeg' },
+      { label: 'PNG', value: 'image/png' }
+    ],
+    description: '生成图片的输出格式（部分 API 端点可能不支持此参数）'
+  },
+  {
     key: 'enableGoogleSearch',
     label: '启用谷歌搜索',
     type: 'boolean',

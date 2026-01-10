@@ -1122,7 +1122,7 @@ async function executeGenerate(
     // 检查是否需要使用链接模式（返回匹配的标签名或 null）
     const linkModeTag = checkLinkMode(config, channelTags)
 
-    return formatResult(result, linkModeTag)
+    return formatResult(result, linkModeTag, config)
   } catch (error) {
     // 撤销"正在生成中"消息
     if (session && generatingMsgIds) {
@@ -1166,7 +1166,8 @@ function checkLinkMode(config: KoishiCommandsConfig, channelTags: string[]): str
  * - 纯音频：只发送音频元素，不带任务ID和计费信息
  * - 链接模式：使用合并转发消息，输出链接而不是直接发图
  */
-function formatResult(result: GenerationResult, linkModeTag: string | null = null): string {
+function formatResult(result: GenerationResult, linkModeTag: string | null = null, config?: KoishiCommandsConfig): string {
+  const outputTextContent = config?.outputTextContent ?? false
   // 失败情况：始终显示任务ID和错误信息
   if (!result.success) {
     const messages: string[] = []
@@ -1193,7 +1194,7 @@ function formatResult(result: GenerationResult, linkModeTag: string | null = nul
   const hasVideo = result.output.some(a => a.kind === 'video' && a.url)
   const hasAudio = result.output.some(a => a.kind === 'audio' && a.url)
   const hasImage = result.output.some(a => a.kind === 'image' && a.url)
-  const hasText = result.output.some(a => a.kind === 'text' && a.content)
+  const hasText = outputTextContent && result.output.some(a => a.kind === 'text' && a.content)
 
   // 纯音频输出：只发送音频元素，不带任何附加信息
   if (hasAudio && !hasVideo && !hasImage && !hasText) {
@@ -1208,22 +1209,22 @@ function formatResult(result: GenerationResult, linkModeTag: string | null = nul
 
   // 包含视频：使用合并转发消息
   if (hasVideo) {
-    return formatVideoResult(result, linkModeTag)
+    return formatVideoResult(result, linkModeTag, outputTextContent)
   }
 
   // 链接模式：使用合并转发消息，每个链接单独一条方便复制
   if (linkModeTag) {
-    return formatLinkModeResult(result, linkModeTag)
+    return formatLinkModeResult(result, linkModeTag, outputTextContent)
   }
 
   // 常规输出：图片/文本，带任务ID和计费信息
-  return formatStandardResult(result)
+  return formatStandardResult(result, outputTextContent)
 }
 
 /**
  * 格式化视频输出（使用合并转发消息）
  */
-function formatVideoResult(result: GenerationResult, linkModeTag: string | null = null): string {
+function formatVideoResult(result: GenerationResult, linkModeTag: string | null = null, outputTextContent: boolean = false): string {
   const forwardMessages: string[] = []
 
   // 第一条消息：任务信息
@@ -1262,7 +1263,7 @@ function formatVideoResult(result: GenerationResult, linkModeTag: string | null 
       }
     } else if (asset.kind === 'audio' && asset.url) {
       forwardMessages.push(`<message><audio url="${asset.url}"/></message>`)
-    } else if (asset.kind === 'text' && asset.content) {
+    } else if (outputTextContent && asset.kind === 'text' && asset.content) {
       forwardMessages.push(`<message>${asset.content}</message>`)
     }
   }
@@ -1273,7 +1274,7 @@ function formatVideoResult(result: GenerationResult, linkModeTag: string | null 
 /**
  * 格式化链接模式输出（使用合并转发消息，每个链接单独一条方便复制）
  */
-function formatLinkModeResult(result: GenerationResult, linkModeTag: string): string {
+function formatLinkModeResult(result: GenerationResult, linkModeTag: string, outputTextContent: boolean = false): string {
   const forwardMessages: string[] = []
 
   // 第一条消息：任务信息
@@ -1302,7 +1303,7 @@ function formatLinkModeResult(result: GenerationResult, linkModeTag: string): st
       forwardMessages.push(`<message>${asset.url}</message>`)
     } else if (asset.kind === 'audio' && asset.url) {
       forwardMessages.push(`<message><audio url="${asset.url}"/></message>`)
-    } else if (asset.kind === 'text' && asset.content) {
+    } else if (outputTextContent && asset.kind === 'text' && asset.content) {
       forwardMessages.push(`<message>${asset.content}</message>`)
     }
   }
@@ -1313,7 +1314,7 @@ function formatLinkModeResult(result: GenerationResult, linkModeTag: string): st
 /**
  * 格式化标准输出（图片/文本）
  */
-function formatStandardResult(result: GenerationResult): string {
+function formatStandardResult(result: GenerationResult, outputTextContent: boolean = false): string {
   const messages: string[] = []
 
   // 任务 ID 放在最开始
@@ -1329,7 +1330,7 @@ function formatStandardResult(result: GenerationResult): string {
       messages.push(`<audio url="${asset.url}"/>`)
     } else if (asset.kind === 'video' && asset.url) {
       messages.push(`<video url="${asset.url}"/>`)
-    } else if (asset.kind === 'text' && asset.content) {
+    } else if (outputTextContent && asset.kind === 'text' && asset.content) {
       messages.push(asset.content)
     }
   }

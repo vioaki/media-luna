@@ -11,34 +11,49 @@ export const connectorFields: ConnectorField[] = [
     required: true,
     default: 'http://127.0.0.1:8188',
     placeholder: 'http://127.0.0.1:8188',
-    description: 'ComfyUI 服务地址'
+    description: 'ComfyUI 服务地址（不含末尾斜杠）'
+  },
+  {
+    key: 'isSecureConnection',
+    label: '使用安全连接',
+    type: 'boolean',
+    default: false,
+    description: '启用后使用 HTTPS/WSS 连接（适用于反向代理等场景）'
   },
   {
     key: 'workflow',
     label: '默认工作流 (JSON)',
     type: 'textarea',
-    description: '默认的 workflow_api.json 内容 (必须包含 KSampler 和 SaveImage 节点)',
+    description: '工作流 JSON（从 ComfyUI 导出的 API 格式）。使用 {{prompt}} 作为提示词占位符',
     default: ''
   },
   {
     key: 'promptNodeId',
-    label: 'Prompt 节点 ID',
+    label: 'Prompt 节点 ID（可选）',
     type: 'text',
-    default: '6', // 默认 workflow 通常是 6
-    description: '输入正向提示词的 CLIPTextEncode 节点 ID'
+    default: '',
+    description: '如不使用 {{prompt}} 占位符，指定 CLIPTextEncode 节点 ID'
   },
   {
-    key: 'seedNodeId',
-    label: 'Seed 节点 ID',
+    key: 'imageNodeId',
+    label: '图片输入节点 ID（可选）',
     type: 'text',
-    default: '3', // 默认 workflow KSampler 通常是 3
-    description: 'KSampler 节点 ID (用于设置随机种子)'
+    default: '',
+    description: 'LoadImage 节点 ID（用于图生图）'
+  },
+  {
+    key: 'avoidCache',
+    label: '避免缓存',
+    type: 'boolean',
+    default: true,
+    description: '自动随机化所有 seed/noise_seed 参数，避免重复结果'
   },
   {
     key: 'timeout',
     label: '超时时间（秒）',
     type: 'number',
-    default: 300
+    default: 300,
+    description: '工作流执行超时时间'
   }
 ]
 

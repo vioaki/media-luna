@@ -27,6 +27,7 @@ async function generate(
     numberOfImages,
     aspectRatio,
     imageSize,
+    outputMimeType,
     enableGoogleSearch,
     thinkingLevel,
     includeThoughts,
@@ -100,6 +101,11 @@ async function generate(
   if (imageSize) imageConfig.imageSize = imageSize
   if (Object.keys(imageConfig).length > 0) {
     requestBody.generationConfig.imageConfig = imageConfig
+  }
+
+  // 添加输出格式配置
+  if (outputMimeType) {
+    requestBody.generationConfig.outputMimetype = outputMimeType
   }
 
   // 如果需要多张图，添加 candidateCount（注意：部分模型可能不支持）
