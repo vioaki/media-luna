@@ -170,124 +170,121 @@
 .theme-material .group-btn.active,
 .theme-material .nav-item.active,
 .theme-material .plugin-card.active {
+    background-color: transparent !important;
+    background: transparent !important;
+    color: #2196F3 !important;
+    /* Material Blue */
+    border: 2px solid #2196F3 !important;
+    box-shadow: none !important;
+}
 
-    /* Active State - Blue Border for ALL Navigation Items */
-    .theme-material .pop-btn.active,
-    .theme-material .nav-tab.active,
-    .theme-material .group-btn.active,
-    .theme-material .nav-item.active,
-    .theme-material .plugin-card.active {
-        background-color: transparent !important;
-        background: transparent !important;
-        color: #2196F3 !important;
-        /* Material Blue */
-        border: 2px solid #2196F3 !important;
-        box-shadow: none !important;
-    }
+/* Fix for CATEGORY TABS & SIDEBAR TABS (Create Channel Dialog) */
+/* User requested: White Background + Black Text for selected items */
+.theme-material .category-tab.active,
+.theme-material .tab-item.active {
+    background-color: #ffffff !important;
+    /* White Background */
+    color: #000000 !important;
+    /* Black Text */
+    border: 2px solid #000000 !important;
+    /* Black Border for visibility */
+    box-shadow: none !important;
+    font-weight: 700 !important;
+}
 
-    /* Fix for CATEGORY TABS & SIDEBAR TABS (Create Channel Dialog) */
-    /* User requested: Black Background + White Text for selected items */
-    .theme-material .category-tab.active,
-    .theme-material .tab-item.active {
-        background-color: #000000 !important;
-        color: #ffffff !important;
-        border-color: #000000 !important;
-        box-shadow: none !important;
-    }
+/* Fix for plugin card text within active state */
+.theme-material .plugin-card.active .plugin-name,
+.theme-material .plugin-card.active .plugin-description,
+.theme-material .plugin-card.active .plugin-version {
+    color: #2196F3 !important;
+}
 
-    /* Fix for plugin card text within active state */
-    .theme-material .plugin-card.active .plugin-name,
-    .theme-material .plugin-card.active .plugin-description,
-    .theme-material .plugin-card.active .plugin-version {
-        color: #2196F3 !important;
-    }
+/* Switches (Custom .toggle-switch from MiddlewaresPanel) */
+.theme-material .toggle-switch .slider {
+    background-color: #e0e0e0 !important;
+    border-color: #bdbdbd !important;
+}
 
-    /* Switches (Custom .toggle-switch from MiddlewaresPanel) */
-    .theme-material .toggle-switch .slider {
-        background-color: #e0e0e0 !important;
-        border-color: #bdbdbd !important;
-    }
+.theme-material .toggle-switch .slider::before {
+    background-color: #ffffff !important;
+    /* Knob always white */
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+}
 
-    .theme-material .toggle-switch .slider::before {
-        background-color: #ffffff !important;
-        /* Knob always white */
-        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
-    }
+.theme-material .toggle-switch input:checked+.slider {
+    background-color: #2196F3 !important;
+    /* Material Blue for ON state */
+    border-color: #2196F3 !important;
+}
 
-    .theme-material .toggle-switch input:checked+.slider {
-        background-color: #2196F3 !important;
-        /* Material Blue for ON state */
-        border-color: #2196F3 !important;
-    }
+.theme-material .toggle-switch input:checked+.slider::before {
+    background-color: #ffffff !important;
+    /* Knob stays white */
+    transform: translateX(20px);
+}
 
-    .theme-material .toggle-switch input:checked+.slider::before {
-        background-color: #ffffff !important;
-        /* Knob stays white */
-        transform: translateX(20px);
-    }
+/* Switches (Element Plus .el-switch) */
+.theme-material {
+    --el-switch-on-color: #4CAF50;
+    --el-switch-off-color: #e0e0e0;
+}
 
-    /* Switches (Element Plus .el-switch) */
-    .theme-material {
-        --el-switch-on-color: #4CAF50;
-        --el-switch-off-color: #e0e0e0;
-    }
+.theme-material .el-switch.is-checked .el-switch__core {
+    background-color: #4CAF50 !important;
+    border-color: #4CAF50 !important;
+}
 
-    .theme-material .el-switch.is-checked .el-switch__core {
-        background-color: #4CAF50 !important;
-        border-color: #4CAF50 !important;
-    }
+.theme-material .el-switch__core {
+    background-color: #e0e0e0 !important;
+    border-color: #bdbdbd !important;
+}
 
-    .theme-material .el-switch__core {
-        background-color: #e0e0e0 !important;
-        border-color: #bdbdbd !important;
-    }
+/* Remove dot patterns globally */
+.theme-material.ml-app,
+.theme-material .ml-app,
+.theme-material .pop-card {
+    background-image: none !important;
+}
 
-    /* Remove dot patterns globally */
-    .theme-material.ml-app,
-    .theme-material .ml-app,
-    .theme-material .pop-card {
-        background-image: none !important;
-    }
+/* Plain Theme + Material Card Overrides */
+.theme-material .ml-card {
+    box-shadow: none;
+    border-width: 1px;
+}
 
-    /* Plain Theme + Material Card Overrides */
-    .theme-material .ml-card {
-        box-shadow: none;
-        border-width: 1px;
-    }
+.theme-material .ml-card--clickable:hover {
+    transform: none;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+}
 
-    .theme-material .ml-card--clickable:hover {
-        transform: none;
-        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
-    }
+.theme-material .ml-table-container {
+    box-shadow: none;
+    border-width: 1px;
+}
 
-    .theme-material .ml-table-container {
-        box-shadow: none;
-        border-width: 1px;
-    }
+.theme-material .ml-badge {
+    border-width: 1px;
+}
 
-    .theme-material .ml-badge {
-        border-width: 1px;
-    }
+.theme-material .ml-tag {
+    border-width: 1px;
+}
 
-    .theme-material .ml-tag {
-        border-width: 1px;
-    }
+/* Fix for Phase Badge (Middleware) - Pure Number, Bold */
+.theme-material .phase-badge {
+    background-color: transparent !important;
+    border: none !important;
+    box-shadow: none !important;
+    color: var(--ml-text) !important;
+    font-weight: 900 !important;
+    font-size: 16px !important;
+    padding: 0 !important;
+    width: auto !important;
+    min-width: 20px !important;
+}
 
-    /* Fix for Phase Badge (Middleware) - Pure Number, Bold */
-    .theme-material .phase-badge {
-        background-color: transparent !important;
-        border: none !important;
-        box-shadow: none !important;
-        color: var(--ml-text) !important;
-        font-weight: 900 !important;
-        font-size: 16px !important;
-        padding: 0 !important;
-        width: auto !important;
-        min-width: 20px !important;
-    }
-
-    /* Ensure middleware tag itself is readable */
-    .theme-material .middleware-tag.enabled {
-        background-color: #f5f5f5 !important;
-        border-color: #e0e0e0 !important;
-    }
+/* Ensure middleware tag itself is readable */
+.theme-material .middleware-tag.enabled {
+    background-color: #f5f5f5 !important;
+    border-color: #e0e0e0 !important;
+}
