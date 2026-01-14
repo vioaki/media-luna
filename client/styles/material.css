@@ -266,6 +266,20 @@
     box-sizing: border-box !important;
 }
 
+/* Fix for CONNECTOR CARDS (Right Panel) */
+/* User requested: Blue Border and Remove Black Dot */
+.theme-material .connector-card.selected {
+    background-color: #ffffff !important;
+    border: 2px solid #2196F3 !important;
+    box-shadow: none !important;
+}
+
+.theme-material .selected-check {
+    background-color: #2196F3 !important;
+    border: none !important;
+    color: #ffffff !important;
+}
+
 /* Fix for plugin card text within active state */
 .theme-material .plugin-card.active .plugin-name,
 .theme-material .plugin-card.active .plugin-description,
