@@ -132,8 +132,7 @@ const themes = [
   { id: 'material', icon: '⚪', label: '简约' },
   { id: 'nailong', icon: '☀️', label: '奶龙' },
   { id: 'sakura', icon: '🌸', label: '樱花' },
-  { id: 'matcha', icon: '🍵', label: '抹茶' },
-  { id: 'manga', icon: '✒️', label: '水墨' }
+  { id: 'matcha', icon: '🍵', label: '抹茶' }
 ]
 
 const currentThemeIndex = ref(0)
