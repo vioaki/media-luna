@@ -205,6 +205,47 @@
     background-color: #f0f0f0 !important;
 }
 
+/* Fix for CLOSE BUTTON (Channel Config Dialog) */
+/* User reported missing X icon. Injecting SVG background. */
+.theme-material .close-btn {
+    width: 32px !important;
+    height: 32px !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    background-color: #ffffff !important;
+    border: 2px solid #000000 !important;
+    border-radius: 8px !important;
+    cursor: pointer !important;
+    /* Hide internal k-icon if it fails to render, use background instead */
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='none' stroke='%23000000' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cline x1='18' y1='6' x2='6' y2='18'%3E%3C/line%3E%3Cline x1='6' y1='6' x2='18' y2='18'%3E%3C/line%3E%3C/svg%3E") !important;
+    background-repeat: no-repeat !important;
+    background-position: center !important;
+    background-size: 20px !important;
+    color: transparent !important;
+    /* Hide text/icon font */
+}
+
+/* Fix for Close Button Hover */
+.theme-material .close-btn:hover {
+    background-color: #ff5252 !important;
+    border-color: #ff5252 !important;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='none' stroke='%23ffffff' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cline x1='18' y1='6' x2='6' y2='18'%3E%3C/line%3E%3Cline x1='6' y1='6' x2='18' y2='18'%3E%3C/line%3E%3C/svg%3E") !important;
+}
+
+/* Fix for HEADER ALIGNMENT (Dialog Header vs Side Panel Header) */
+/* User requested: Make both gray headers equal height */
+.theme-material .dialog-header,
+.theme-material .side-panel-header {
+    height: 70px !important;
+    min-height: 70px !important;
+    padding: 0 24px !important;
+    /* Adjust padding to center content vertically */
+    display: flex !important;
+    align-items: center !important;
+    box-sizing: border-box !important;
+}
+
 /* Fix for plugin card text within active state */
 .theme-material .plugin-card.active .plugin-name,
 .theme-material .plugin-card.active .plugin-description,
