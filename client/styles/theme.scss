@@ -130,37 +130,6 @@
 }
 
 /*
- * [Theme - Manga/Ink (Black & White)]
- * High Contrast, Comic Book Style
- */
-.theme-manga {
-  /* Primary Button: White background with Black border (Outline style) */
-  --ml-primary: #ffffff;
-  --ml-primary-dark: #000000;
-  /* Hover/Active turns Black */
-  --ml-primary-light: #e5e5e5;
-
-  --ml-bg: #ffffff;
-  --ml-bg-alt: #f4f4f5;
-  --ml-surface: #ffffff;
-
-  --ml-text: #000000;
-  --ml-text-secondary: #404040;
-  --ml-text-muted: #737373;
-
-  --ml-header-bg: rgba(255, 255, 255, 0.9);
-
-  --ml-border-color: #000000;
-}
-
-/* Manga Theme Button Override: Invert on Hover */
-.theme-manga .pop-btn.primary:hover {
-  background: var(--ml-primary-dark);
-  /* Black */
-  color: #ffffff;
-}
-
-/*
  * [Theme - Plain (朴素模式)]
  * 简洁、无特效阴影、直线框
  * 适合喜欢简约风格的用户
